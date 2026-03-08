@@ -55,6 +55,7 @@ public partial class MainWindow : Window
         RestartMicPreview();
         StartScreenPreviewTimer();
         UpdateLogsPlaceholderVisibility();
+        UpdateSessionButtons(isRunning: false);
 
         _orchestrator.StatusChanged += message => Dispatcher.Invoke(() => SetStatus(message));
         _orchestrator.SessionStateChanged += isRunning => Dispatcher.Invoke(() =>
@@ -63,6 +64,7 @@ public partial class MainWindow : Window
             SessionStatusPill.Background = isRunning
                 ? new SolidColorBrush((WpfColor)System.Windows.Media.ColorConverter.ConvertFromString("#3300D4AA"))
                 : new SolidColorBrush((WpfColor)System.Windows.Media.ColorConverter.ConvertFromString("#22C62828"));
+            UpdateSessionButtons(isRunning);
         });
         _orchestrator.InputTranscriptionChanged += text => Dispatcher.Invoke(() =>
         {
@@ -245,6 +247,14 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             SetStatus($"Stop failed: {ex.Message}");
+        }
+    }
+
+    private async void ExitAppButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (System.Windows.Application.Current is App app)
+        {
+            await app.ExitApplicationAsync();
         }
     }
 
@@ -1072,6 +1082,12 @@ public partial class MainWindow : Window
     private void UpdateMicrophoneGainLabel(double gain)
     {
         MicrophoneGainValueTextBlock.Text = $"{Math.Round(gain * 100):0}%";
+    }
+
+    private void UpdateSessionButtons(bool isRunning)
+    {
+        StartSessionButton.IsEnabled = !isRunning;
+        StopSessionButton.IsEnabled = isRunning;
     }
 
     private void UpdateLogsPlaceholderVisibility()

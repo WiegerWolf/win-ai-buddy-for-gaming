@@ -108,6 +108,11 @@ public partial class App : Application
         _notifyIcon.ShowBalloonTip(timeoutMs);
     }
 
+    public Task ExitApplicationAsync()
+    {
+        return ShutdownFromTrayAsync();
+    }
+
     public void ApplyTheme(string? themeName)
     {
         var dictionarySource = ResolveThemeDictionary(themeName);
