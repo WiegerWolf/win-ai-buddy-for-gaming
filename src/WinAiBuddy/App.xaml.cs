@@ -9,6 +9,7 @@ namespace WinAiBuddy;
 
 public partial class App : Application
 {
+    private const string ThemeDictionaryPrefix = "Themes/";
     private NotifyIcon? _notifyIcon;
     private MainWindow? _mainWindow;
     private GameAssistantOrchestrator? _orchestrator;
@@ -28,6 +29,7 @@ public partial class App : Application
 
         var settingsService = new SettingsService(settingsPath);
         settingsService.EnsureLoaded();
+        ApplyTheme(settingsService.Current.AppTheme);
 
         var overlayWindow = new OverlayWindow();
         var overlayService = new OverlayService(overlayWindow, settingsService);
@@ -106,6 +108,16 @@ public partial class App : Application
         _notifyIcon.ShowBalloonTip(timeoutMs);
     }
 
+    public void ApplyTheme(string? themeName)
+    {
+        var dictionarySource = ResolveThemeDictionary(themeName);
+        Resources.MergedDictionaries.Clear();
+        Resources.MergedDictionaries.Add(new ResourceDictionary
+        {
+            Source = new Uri($"{ThemeDictionaryPrefix}{dictionarySource}", UriKind.Relative)
+        });
+    }
+
     private async Task ShutdownFromTrayAsync()
     {
         if (_isShuttingDown)
@@ -166,5 +178,15 @@ public partial class App : Application
         catch
         {
         }
+    }
+
+    private static string ResolveThemeDictionary(string? themeName)
+    {
+        return themeName?.Trim().ToLowerInvariant() switch
+        {
+            "dark" => "DarkTheme.xaml",
+            "light" => "LightTheme.xaml",
+            _ => "SystemTheme.xaml"
+        };
     }
 }

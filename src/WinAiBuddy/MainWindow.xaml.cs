@@ -60,6 +60,9 @@ public partial class MainWindow : Window
         _orchestrator.SessionStateChanged += isRunning => Dispatcher.Invoke(() =>
         {
             SessionStateTextBlock.Text = isRunning ? "Running" : "Stopped";
+            SessionStatusPill.Background = isRunning
+                ? new SolidColorBrush((WpfColor)System.Windows.Media.ColorConverter.ConvertFromString("#3300D4AA"))
+                : new SolidColorBrush((WpfColor)System.Windows.Media.ColorConverter.ConvertFromString("#22C62828"));
         });
         _orchestrator.InputTranscriptionChanged += text => Dispatcher.Invoke(() =>
         {
@@ -96,6 +99,7 @@ public partial class MainWindow : Window
 
     private void LoadSettings(AppSettings settings)
     {
+        SelectAppTheme(settings.AppTheme);
         ApiKeyPasswordBox.Password = settings.ApiKey;
         SelectLiveModel(settings.LiveModel);
         SelectMediaResolution(settings.MediaResolution);
@@ -104,7 +108,7 @@ public partial class MainWindow : Window
         EnableContextCompressionCheckBox.IsChecked = settings.EnableContextWindowCompression;
         ContextCompressionTriggerTokensTextBox.Text = settings.ContextCompressionTriggerTokens.ToString(CultureInfo.InvariantCulture);
         ContextCompressionTargetTokensTextBox.Text = settings.ContextCompressionTargetTokens.ToString(CultureInfo.InvariantCulture);
-        EnableThinkingConfigCheckBox.IsChecked = settings.EnableThinkingConfig;
+        SelectThinkingMode(settings);
         ThinkingBudgetTextBox.Text = settings.ThinkingBudget.ToString(CultureInfo.InvariantCulture);
         SelectThinkingLevel(settings.ThinkingLevel);
         IncludeThoughtsCheckBox.IsChecked = settings.IncludeThoughts;
@@ -125,6 +129,8 @@ public partial class MainWindow : Window
         OverlayOutlineThicknessTextBox.Text = settings.OverlayOutlineThickness.ToString("0.##", CultureInfo.InvariantCulture);
         UpdateOverlayOpacityLabel(settings.OverlayOpacity);
         OverlayBgOpacityValueTextBlock.Text = settings.OverlayBackgroundOpacity.ToString("0.00", CultureInfo.InvariantCulture);
+        UpdateOverlayColorSwatches();
+        UpdateThinkingControlsState();
         SystemPromptTextBox.Text = settings.SystemPrompt;
         StreamScreenFramesCheckBox.IsChecked = settings.StreamScreenFrames;
         AutoStartSessionCheckBox.IsChecked = settings.AutoStartSession;
@@ -134,9 +140,13 @@ public partial class MainWindow : Window
     private AppSettings ReadSettingsFromUi()
     {
         var current = _settingsService.Current;
+        var thinkingMode = ReadSelectedThinkingMode(current);
+        var isThinkingCustom = string.Equals(thinkingMode, "Custom", StringComparison.OrdinalIgnoreCase);
+        var isThinkingDisabled = string.Equals(thinkingMode, "Disabled", StringComparison.OrdinalIgnoreCase);
 
         return new AppSettings
         {
+            AppTheme = ReadSelectedAppTheme(current.AppTheme),
             ApiKey = ApiKeyPasswordBox.Password.Trim(),
             LiveModel = ReadSelectedLiveModel(current.LiveModel),
             EnableAffectiveDialog = EnableAffectiveDialogCheckBox.IsChecked == true,
@@ -153,14 +163,17 @@ public partial class MainWindow : Window
                 1,
                 1_000_000),
             MediaResolution = ReadSelectedMediaResolution(current.MediaResolution),
-            EnableThinkingConfig = EnableThinkingConfigCheckBox.IsChecked == true,
-            ThinkingBudget = ParseOrDefault(
-                ThinkingBudgetTextBox.Text,
-                current.ThinkingBudget,
-                -1,
-                1_000_000),
-            ThinkingLevel = ReadSelectedThinkingLevel(current.ThinkingLevel),
-            IncludeThoughts = IncludeThoughtsCheckBox.IsChecked == true,
+            EnableThinkingConfig = !string.Equals(thinkingMode, "Default", StringComparison.OrdinalIgnoreCase),
+            ThinkingMode = thinkingMode,
+            ThinkingBudget = isThinkingDisabled
+                ? 0
+                : (isThinkingCustom
+                    ? ParseThinkingBudgetOrDefault(ThinkingBudgetTextBox.Text, current.ThinkingBudget)
+                    : -1),
+            ThinkingLevel = isThinkingCustom
+                ? ReadSelectedThinkingLevel(current.ThinkingLevel)
+                : "Default",
+            IncludeThoughts = isThinkingCustom && IncludeThoughtsCheckBox.IsChecked == true,
             Voice = ReadSelectedVoice(current.Voice),
             MicrophoneDeviceName = ReadSelectedMicrophone(current.MicrophoneDeviceName),
             MicrophoneGain = Math.Clamp(MicrophoneGainSlider.Value, 0.0, 3.0),
@@ -188,11 +201,17 @@ public partial class MainWindow : Window
     {
         try
         {
+            var previousTheme = _settingsService.Current.AppTheme;
             var settings = ReadSettingsFromUi();
             _settingsService.Save(settings);
             _overlayService.ApplySettings(settings);
-            SetStatus($"Saved settings. Model: {settings.LiveModel}. Voice: {settings.Voice}");
-            await _overlayService.ShowMessageAsync("Settings saved.", TimeSpan.FromSeconds(2));
+            var themeChanged = !string.Equals(previousTheme, settings.AppTheme, StringComparison.OrdinalIgnoreCase);
+            SetStatus(themeChanged
+                ? $"Saved settings. Model: {settings.LiveModel}. Theme change will apply next time you open the app."
+                : $"Saved settings. Model: {settings.LiveModel}. Voice: {settings.Voice}");
+            await _overlayService.ShowMessageAsync(
+                themeChanged ? "Settings saved. Restart the app to switch theme." : "Settings saved.",
+                TimeSpan.FromSeconds(2));
         }
         catch (Exception ex)
         {
@@ -430,6 +449,7 @@ public partial class MainWindow : Window
 
     private void OverlayPropertyTextBox_OnTextChanged(object sender, TextChangedEventArgs e)
     {
+        UpdateOverlayColorSwatches();
         UpdateOverlayPreview();
     }
 
@@ -531,6 +551,7 @@ public partial class MainWindow : Window
         {
             var c = dialog.Color;
             target.Text = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
+            UpdateOverlayColorSwatches();
         }
     }
 
@@ -612,6 +633,13 @@ public partial class MainWindow : Window
 
     private void InitializeModelOptionLists()
     {
+        AppThemeComboBox.ItemsSource = new[]
+        {
+            "System",
+            "Light",
+            "Dark"
+        };
+
         LiveModelComboBox.ItemsSource = new[]
         {
             "gemini-2.5-flash-native-audio-preview-12-2025"
@@ -633,6 +661,13 @@ public partial class MainWindow : Window
             "Medium",
             "High"
         };
+
+        ThinkingModeComboBox.ItemsSource = new[]
+        {
+            "Default",
+            "Disabled",
+            "Custom"
+        };
     }
 
     private static int ParseOrDefault(string? value, int fallback, int min, int max)
@@ -643,6 +678,16 @@ public partial class MainWindow : Window
         }
 
         return Math.Clamp(parsed, min, max);
+    }
+
+    private static int ParseThinkingBudgetOrDefault(string? value, int fallback)
+    {
+        if (!int.TryParse(value, out var parsed))
+        {
+            return fallback;
+        }
+
+        return Math.Clamp(parsed, -1, 1_000_000);
     }
 
     private static double ParseDoubleOrDefault(string? value, double fallback, double min, double max)
@@ -801,6 +846,19 @@ public partial class MainWindow : Window
         VoiceComboBox.SelectedValue = existing.Name;
     }
 
+    private void SelectAppTheme(string value)
+    {
+        var selected = string.IsNullOrWhiteSpace(value) ? "System" : value.Trim();
+        if (!AppThemeComboBox.Items.Cast<string>()
+                .Any(item => string.Equals(item, selected, StringComparison.OrdinalIgnoreCase)))
+        {
+            selected = "System";
+        }
+
+        AppThemeComboBox.SelectedItem = AppThemeComboBox.Items.Cast<string>()
+            .First(item => string.Equals(item, selected, StringComparison.OrdinalIgnoreCase));
+    }
+
     private void SelectLiveModel(string value)
     {
         var selected = string.IsNullOrWhiteSpace(value)
@@ -827,6 +885,24 @@ public partial class MainWindow : Window
         }
 
         MediaResolutionComboBox.SelectedItem = MediaResolutionComboBox.Items.Cast<string>()
+            .First(item => string.Equals(item, selected, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void SelectThinkingMode(AppSettings settings)
+    {
+        var selected = !string.IsNullOrWhiteSpace(settings.ThinkingMode)
+            ? settings.ThinkingMode.Trim()
+            : settings.EnableThinkingConfig
+                ? settings.ThinkingBudget == 0 ? "Disabled" : "Custom"
+                : "Default";
+
+        if (!ThinkingModeComboBox.Items.Cast<string>()
+                .Any(item => string.Equals(item, selected, StringComparison.OrdinalIgnoreCase)))
+        {
+            selected = "Default";
+        }
+
+        ThinkingModeComboBox.SelectedItem = ThinkingModeComboBox.Items.Cast<string>()
             .First(item => string.Equals(item, selected, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -895,6 +971,16 @@ public partial class MainWindow : Window
         return fallback;
     }
 
+    private string ReadSelectedAppTheme(string fallback)
+    {
+        if (AppThemeComboBox.SelectedItem is string selected && !string.IsNullOrWhiteSpace(selected))
+        {
+            return selected;
+        }
+
+        return fallback;
+    }
+
     private string ReadSelectedLiveModel(string fallback)
     {
         if (LiveModelComboBox.SelectedItem is string selected && !string.IsNullOrWhiteSpace(selected))
@@ -913,6 +999,16 @@ public partial class MainWindow : Window
         }
 
         return fallback;
+    }
+
+    private string ReadSelectedThinkingMode(AppSettings fallback)
+    {
+        if (ThinkingModeComboBox.SelectedItem is string selected && !string.IsNullOrWhiteSpace(selected))
+        {
+            return selected;
+        }
+
+        return string.IsNullOrWhiteSpace(fallback.ThinkingMode) ? "Default" : fallback.ThinkingMode;
     }
 
     private string ReadSelectedThinkingLevel(string fallback)
@@ -958,6 +1054,19 @@ public partial class MainWindow : Window
     private void UpdateOverlayOpacityLabel(double value)
     {
         OverlayOpacityValueTextBlock.Text = value.ToString("0.00", CultureInfo.InvariantCulture);
+    }
+
+    private void UpdateOverlayColorSwatches()
+    {
+        SetColorSwatch(OverlayBgColorSwatch, OverlayBgColorTextBox.Text, "#111111");
+        SetColorSwatch(OverlayTextColorSwatch, OverlayTextColorTextBox.Text, "#FFFFFFFF");
+        SetColorSwatch(OverlayOutlineColorSwatch, OverlayOutlineColorTextBox.Text, "#FF06131A");
+    }
+
+    private static void SetColorSwatch(Border swatch, string? value, string fallback)
+    {
+        var hex = NormalizeColorOrDefault(value, fallback);
+        swatch.Background = new SolidColorBrush((WpfColor)System.Windows.Media.ColorConverter.ConvertFromString(hex));
     }
 
     private void UpdateMicrophoneGainLabel(double gain)
@@ -1011,6 +1120,42 @@ public partial class MainWindow : Window
         SessionPanel.Visibility = Visibility.Collapsed;
         SettingsPanel.Visibility = Visibility.Collapsed;
         ConversationPanel.Visibility = Visibility.Visible;
+    }
+
+    private void OpenSettingsButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        NavSettings.IsChecked = true;
+    }
+
+    private void OpenConversationButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        NavConversation.IsChecked = true;
+    }
+
+    private void ThinkingModeComboBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsInitialized)
+        {
+            return;
+        }
+
+        UpdateThinkingControlsState();
+    }
+
+    private void UpdateThinkingControlsState()
+    {
+        var mode = ThinkingModeComboBox.SelectedItem as string ?? "Default";
+        var isCustom = string.Equals(mode, "Custom", StringComparison.OrdinalIgnoreCase);
+        var isDisabled = string.Equals(mode, "Disabled", StringComparison.OrdinalIgnoreCase);
+
+        ThinkingCustomOptionsPanel.IsEnabled = isCustom;
+        ThinkingCustomOptionsPanel.Visibility = isCustom ? Visibility.Visible : Visibility.Collapsed;
+
+        ThinkingModeDescriptionTextBlock.Text = isDisabled
+            ? "Thinking is explicitly turned off. The app sends a thinking budget of 0 to Gemini."
+            : isCustom
+                ? "Customize the model's thinking budget and level for this session."
+                : "Use the model default thinking behavior.";
     }
 
     protected override void OnClosed(EventArgs e)

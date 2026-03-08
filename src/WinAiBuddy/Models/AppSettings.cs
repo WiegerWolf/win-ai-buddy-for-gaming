@@ -2,6 +2,8 @@ namespace WinAiBuddy.Models;
 
 public sealed class AppSettings
 {
+    public string AppTheme { get; set; } = "System";
+
     public string ApiKey { get; set; } = string.Empty;
 
     public string LiveModel { get; set; } = "gemini-2.5-flash-native-audio-preview-12-2025";
@@ -19,6 +21,8 @@ public sealed class AppSettings
     public string MediaResolution { get; set; } = "Low";
 
     public bool EnableThinkingConfig { get; set; }
+
+    public string ThinkingMode { get; set; } = "Default";
 
     public int ThinkingBudget { get; set; } = -1;
 

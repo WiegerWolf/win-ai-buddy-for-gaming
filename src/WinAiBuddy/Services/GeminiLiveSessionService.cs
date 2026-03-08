@@ -446,9 +446,18 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
 
     private static ThinkingConfig? BuildThinkingConfig(AppSettings settings)
     {
-        if (!settings.EnableThinkingConfig)
+        var mode = settings.ThinkingMode?.Trim().ToLowerInvariant();
+        if (!settings.EnableThinkingConfig || mode == "default")
         {
             return null;
+        }
+
+        if (mode == "disabled")
+        {
+            return new ThinkingConfig
+            {
+                ThinkingBudget = 0
+            };
         }
 
         return new ThinkingConfig
