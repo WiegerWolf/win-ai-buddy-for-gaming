@@ -1,67 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
-  <title>Win AI Buddy Gaming Icon</title>
-  <desc>Glowing futuristic AI robot face wearing a gaming headset, styled with Gemini-like gradients (blue, purple, pink).</desc>
+  <title>Win AI Buddy Icon V2</title>
+  <desc>A bold, highly visible stylized spark icon designed for maximum tray readability.</desc>
   <defs>
-    <!-- Background Gradient (Deep Space/Tech) -->
+    <!-- Background: Deep Space/Tech (dark enough so bright colors pop) -->
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0b0e14" />
-      <stop offset="50%" stop-color="#151b29" />
-      <stop offset="100%" stop-color="#0d111a" />
+      <stop offset="0%" stop-color="#0F0C29" />
+      <stop offset="50%" stop-color="#302B63" />
+      <stop offset="100%" stop-color="#24243E" />
     </linearGradient>
 
-    <!-- Gemini Spark Gradient for Border and Accents -->
-    <linearGradient id="geminiSpark" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#4B90FF" />   <!-- Deep Blue -->
-      <stop offset="33%" stop-color="#8062FF" />  <!-- Purple -->
-      <stop offset="66%" stop-color="#D766FF" />  <!-- Pink -->
-      <stop offset="100%" stop-color="#FF7597" /> <!-- Peach/Red -->
-    </linearGradient>
-
-    <!-- Inner Glow Gradient for the Robot Face -->
-    <linearGradient id="faceGlow" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#2CC8FF" />
-      <stop offset="100%" stop-color="#5AF5D2" />
+    <!-- Gemini Spark Gradient for the main shape (Pink/Purple/Cyan) -->
+    <linearGradient id="sparkGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5AF5D2" />   <!-- Cyan   -->
+      <stop offset="33%" stop-color="#2CC8FF" />  <!-- Light Blue -->
+      <stop offset="66%" stop-color="#D766FF" />  <!-- Pink/Purple -->
+      <stop offset="100%" stop-color="#FF7597" /> <!-- Peach/Red  -->
     </linearGradient>
   </defs>
 
-  <!-- Base App Tile with Border -->
-  <rect x="16" y="16" width="224" height="224" rx="54" fill="url(#bg)" />
-  <rect x="16" y="16" width="224" height="224" rx="54" fill="none" stroke="url(#geminiSpark)" stroke-width="8" opacity="0.9" />
+  <!-- Solid Background for high contrast even in dark mode -->
+  <rect x="0" y="0" width="256" height="256" rx="60" fill="url(#bg)" />
 
-  <!-- Robot Head / Outer Shell -->
-  <path d="M78 126c0-30 20-56 50-56s50 26 50 56v42c0 24-18 42-42 42H120c-24 0-42-18-42-42v-42z" 
-        fill="#1e273b" stroke="#334155" stroke-width="4" />
-
-  <!-- Headset Band -->
-  <path d="M64 116A64 64 0 0 1 192 116" fill="none" stroke="url(#geminiSpark)" stroke-width="12" stroke-linecap="round" />
-
-  <!-- Headset Ear Cups -->
-  <rect x="52" y="106" width="20" height="48" rx="8" fill="#0f172a" stroke="#D766FF" stroke-width="4" />
-  <rect x="184" y="106" width="20" height="48" rx="8" fill="#0f172a" stroke="#8062FF" stroke-width="4" />
-
-  <!-- Headset Microphone (Left side, from ear cup) -->
-  <path d="M72 142v10c0 10 8 18 18 18h14" fill="none" stroke="#4B90FF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
-  <circle cx="104" cy="170" r="6" fill="#5AF5D2" />
-
-  <!-- Robot Face Plate (Visor) -->
-  <path d="M92 114h72c8 0 14 6 14 14v12c0 16-16 26-34 26h-32c-18 0-34-10-34-26v-12c0-8 6-14 14-14z" fill="#020617" />
-  <path d="M92 114h72c8 0 14 6 14 14v12c0 16-16 26-34 26h-32c-18 0-34-10-34-26v-12c0-8 6-14 14-14z" fill="url(#faceGlow)" opacity="0.15" />
-
-  <!-- Robot Eyes (Glowing LED style) -->
-  <rect x="104" y="128" width="16" height="8" rx="4" fill="#5AF5D2" />
-  <rect x="136" y="128" width="16" height="8" rx="4" fill="#5AF5D2" />
-
-  <!-- Audio Waveform / Spark Accents on Visor -->
-  <rect x="126" y="148" width="4" height="6" rx="2" fill="#2CC8FF" />
-  <rect x="118" y="146" width="4" height="8" rx="2" fill="#2CC8FF" />
-  <rect x="134" y="146" width="4" height="8" rx="2" fill="#2CC8FF" />
-
-  <!-- Floating "Gemini Spark" Style Stars Background Elements -->
-  <!-- Top Left Spark -->
-  <path d="M50 44c10 0 14-4 14-14 0 10 4 14 14 14-10 0-14 4-14 14 0-10-4-14-14-14z" fill="#D766FF" opacity="0.8" />
-  <!-- Bottom Right Spark -->
-  <path d="M192 196c8 0 12-4 12-12 0 8 4 12 12 12-8 0-12 4-12 12 0-8-4-12-12-12z" fill="#4B90FF" opacity="0.8" />
-  <!-- Small Bottom Left Spark -->
-  <path d="M48 180c6 0 8-2 8-8 0 6 2 8 8 8-6 0-8 2-8 8 0-6-2-8-8-8z" fill="#FF7597" opacity="0.6" />
+  <!-- 
+    The Main Spark Shape: 
+    A thick, bold four-pointed star with a hollow center (speech bubble/eye vibe).
+    It is massive and simple so it reads perfectly at 16x16 pixels.
+  -->
+  <path d="M128 32 C128 80, 176 128, 224 128 C176 128, 128 176, 128 224 C128 176, 80 128, 32 128 C80 128, 128 80, 128 32 Z" 
+        fill="url(#sparkGlow)" />
+        
+  <!-- Core cutout for an extra dimension of light/dark -->
+  <circle cx="128" cy="128" r="32" fill="url(#bg)" />
+  <circle cx="128" cy="128" r="16" fill="#5AF5D2" />
 
 </svg>
