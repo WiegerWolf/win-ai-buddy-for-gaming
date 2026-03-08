@@ -7,10 +7,17 @@ namespace WinAiBuddy.Services;
 public sealed class GeminiLiveSessionService : IAsyncDisposable
 {
     private readonly SemaphoreSlim _sendLock = new(1, 1);
+    private readonly object _transcriptLock = new();
     private Client? _client;
     private AsyncSession? _session;
     private CancellationTokenSource? _receiveLoopCts;
     private Task? _receiveLoopTask;
+    private string _currentInputTranscript = string.Empty;
+    private string _currentOutputTranscript = string.Empty;
+    private DateTime _lastInputTranscriptAt = DateTime.MinValue;
+    private DateTime _lastOutputTranscriptAt = DateTime.MinValue;
+    private bool _inputTurnOpen;
+    private bool _outputTurnOpen;
 
     public event Action<string>? StatusChanged;
 
@@ -27,6 +34,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
     public async Task StartAsync(AppSettings settings, CancellationToken cancellationToken = default)
     {
         await StopAsync(cancellationToken);
+        ResetTranscriptState();
 
         if (string.IsNullOrWhiteSpace(settings.ApiKey))
         {
@@ -127,6 +135,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
     public async Task StopAsync(CancellationToken cancellationToken = default)
     {
         _receiveLoopCts?.Cancel();
+        ResetTranscriptState();
 
         if (_session is not null)
         {
@@ -196,16 +205,19 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
     {
         if (message.ServerContent?.InputTranscription?.Text is { Length: > 0 } inputText)
         {
-            InputTranscriptionChanged?.Invoke(inputText);
+            PublishInputTranscript(inputText);
         }
 
+        var emittedOutputTranscription = false;
         if (message.ServerContent?.OutputTranscription?.Text is { Length: > 0 } outputText)
         {
-            OutputTranscriptionChanged?.Invoke(outputText);
+            PublishOutputTranscript(outputText);
+            emittedOutputTranscription = true;
         }
 
         if (message.ServerContent?.Interrupted == true)
         {
+            ResetOutputTranscript();
             Interrupted?.Invoke();
         }
 
@@ -222,15 +234,172 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
 
         foreach (var part in parts)
         {
-            if (!string.IsNullOrWhiteSpace(part.Text))
+            if (!emittedOutputTranscription &&
+                part.Thought != true &&
+                !string.IsNullOrWhiteSpace(part.Text))
             {
-                OutputTranscriptionChanged?.Invoke(part.Text);
+                PublishOutputTranscript(part.Text);
             }
 
             if (part.InlineData?.Data is { Length: > 0 } audioBytes)
             {
                 AudioReceived?.Invoke(audioBytes);
             }
+        }
+
+        if (message.ServerContent?.GenerationComplete == true || message.ServerContent?.TurnComplete == true)
+        {
+            CloseTranscriptTurns();
+        }
+    }
+
+    private void PublishInputTranscript(string chunk)
+    {
+        var aggregated = MergeTranscriptChunk(
+            chunk,
+            ref _currentInputTranscript,
+            ref _lastInputTranscriptAt,
+            ref _inputTurnOpen);
+
+        if (aggregated is not null)
+        {
+            InputTranscriptionChanged?.Invoke(aggregated);
+        }
+    }
+
+    private void PublishOutputTranscript(string chunk)
+    {
+        var aggregated = MergeTranscriptChunk(
+            chunk,
+            ref _currentOutputTranscript,
+            ref _lastOutputTranscriptAt,
+            ref _outputTurnOpen);
+
+        if (aggregated is not null)
+        {
+            lock (_transcriptLock)
+            {
+                _inputTurnOpen = false;
+            }
+
+            OutputTranscriptionChanged?.Invoke(aggregated);
+        }
+    }
+
+    private string? MergeTranscriptChunk(
+        string chunk,
+        ref string currentTranscript,
+        ref DateTime lastUpdatedAt,
+        ref bool turnOpen)
+    {
+        var cleaned = chunk.Trim();
+        if (string.IsNullOrWhiteSpace(cleaned))
+        {
+            return null;
+        }
+
+        lock (_transcriptLock)
+        {
+            var now = DateTime.UtcNow;
+            var shouldReset = !turnOpen || (now - lastUpdatedAt) > TimeSpan.FromSeconds(3);
+            if (shouldReset)
+            {
+                currentTranscript = cleaned;
+                turnOpen = true;
+            }
+            else
+            {
+                currentTranscript = MergeIncrementalText(currentTranscript, cleaned);
+            }
+
+            lastUpdatedAt = now;
+            return currentTranscript;
+        }
+    }
+
+    private static string MergeIncrementalText(string existing, string incoming)
+    {
+        if (string.IsNullOrWhiteSpace(existing))
+        {
+            return incoming;
+        }
+
+        if (string.Equals(existing, incoming, StringComparison.Ordinal))
+        {
+            return existing;
+        }
+
+        if (incoming.StartsWith(existing, StringComparison.Ordinal))
+        {
+            return incoming;
+        }
+
+        if (existing.StartsWith(incoming, StringComparison.Ordinal))
+        {
+            return existing;
+        }
+
+        if (existing.EndsWith(incoming, StringComparison.Ordinal))
+        {
+            return existing;
+        }
+
+        if (incoming.Length > 0 &&
+            char.IsLetterOrDigit(incoming[0]) &&
+            existing.Length > 0 &&
+            char.IsLetterOrDigit(existing[^1]))
+        {
+            var lastTokenLength = existing.Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault()?.Length ?? 0;
+            var firstTokenLength = incoming.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Length ?? 0;
+
+            if (lastTokenLength <= 3 && firstTokenLength <= 4 && !incoming.Contains(' '))
+            {
+                return existing + incoming;
+            }
+        }
+
+        if (incoming.Length > 0 && ".,!?;:)]}".Contains(incoming[0]))
+        {
+            return existing + incoming;
+        }
+
+        if (existing.Length > 0 && "([{".Contains(existing[^1]))
+        {
+            return existing + incoming;
+        }
+
+        return existing + " " + incoming;
+    }
+
+    private void CloseTranscriptTurns()
+    {
+        lock (_transcriptLock)
+        {
+            _inputTurnOpen = false;
+            _outputTurnOpen = false;
+        }
+    }
+
+    private void ResetTranscriptState()
+    {
+        lock (_transcriptLock)
+        {
+            _currentInputTranscript = string.Empty;
+            _currentOutputTranscript = string.Empty;
+            _lastInputTranscriptAt = DateTime.MinValue;
+            _lastOutputTranscriptAt = DateTime.MinValue;
+            _inputTurnOpen = false;
+            _outputTurnOpen = false;
+        }
+    }
+
+    private void ResetOutputTranscript()
+    {
+        lock (_transcriptLock)
+        {
+            _currentOutputTranscript = string.Empty;
+            _lastOutputTranscriptAt = DateTime.MinValue;
+            _outputTurnOpen = false;
         }
     }
 
