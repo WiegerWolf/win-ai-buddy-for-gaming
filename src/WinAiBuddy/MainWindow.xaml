@@ -132,6 +132,8 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
@@ -195,19 +197,19 @@
                         </Grid>
 
                         <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Outline thickness" />
-                        <Grid Grid.Row="7" Grid.Column="1" Margin="0,8" Height="32">
+                        <Grid Grid.Row="7" Grid.Column="1" Margin="0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="32" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBox x:Name="OverlayOutlineThicknessTextBox" Grid.Column="0" VerticalContentAlignment="Center" TextChanged="OverlayPropertyTextBox_OnTextChanged" />
-                            <Grid Grid.Column="1">
+                            <TextBox x:Name="OverlayOutlineThicknessTextBox" Grid.Column="0" Height="32" VerticalContentAlignment="Center" TextChanged="OverlayPropertyTextBox_OnTextChanged" />
+                            <Grid Grid.Column="1" Margin="12,0,0,0" Width="80" Height="32">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="*" />
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
-                                <RepeatButton Grid.Row="0" Content="▲" FontSize="8" Click="ThicknessUpButton_OnClick" Delay="250" Interval="50" />
-                                <RepeatButton Grid.Row="1" Content="▼" FontSize="8" Click="ThicknessDownButton_OnClick" Delay="250" Interval="50" />
+                                <RepeatButton Grid.Row="0" Content="▲" FontSize="8" Click="ThicknessUpButton_OnClick" Delay="250" Interval="50" IsTabStop="False" />
+                                <RepeatButton Grid.Row="1" Content="▼" FontSize="8" Click="ThicknessDownButton_OnClick" Delay="250" Interval="50" IsTabStop="False" />
                             </Grid>
                         </Grid>
 
