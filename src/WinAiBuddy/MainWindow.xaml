@@ -41,7 +41,13 @@
             <TextBox x:Name="LiveModelTextBox" Grid.Row="2" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
 
             <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Voice" />
-            <TextBox x:Name="VoiceTextBox" Grid.Row="3" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+            <ComboBox x:Name="VoiceComboBox"
+                      Grid.Row="3"
+                      Grid.Column="1"
+                      Margin="0,8"
+                      Height="32"
+                      DisplayMemberPath="DisplayName"
+                      SelectedValuePath="Name" />
 
             <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Screen frame ms" />
             <TextBox x:Name="ScreenIntervalTextBox" Grid.Row="4" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />

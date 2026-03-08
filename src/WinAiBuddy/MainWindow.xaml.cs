@@ -22,6 +22,7 @@ public partial class MainWindow : Window
         _overlayService = overlayService;
 
         InitializeComponent();
+        VoiceComboBox.ItemsSource = GeminiVoiceCatalog.All;
         LoadSettings(_settingsService.Current);
 
         _orchestrator.StatusChanged += message => Dispatcher.Invoke(() => SetStatus(message));
@@ -63,7 +64,7 @@ public partial class MainWindow : Window
     {
         ApiKeyPasswordBox.Password = settings.ApiKey;
         LiveModelTextBox.Text = settings.LiveModel;
-        VoiceTextBox.Text = settings.Voice;
+        SelectVoice(settings.Voice);
         ScreenIntervalTextBox.Text = settings.ScreenCaptureIntervalMs.ToString();
         OverlaySecondsTextBox.Text = settings.OverlayDurationSeconds.ToString();
         SystemPromptTextBox.Text = settings.SystemPrompt;
@@ -80,7 +81,7 @@ public partial class MainWindow : Window
         {
             ApiKey = ApiKeyPasswordBox.Password.Trim(),
             LiveModel = string.IsNullOrWhiteSpace(LiveModelTextBox.Text) ? current.LiveModel : LiveModelTextBox.Text.Trim(),
-            Voice = string.IsNullOrWhiteSpace(VoiceTextBox.Text) ? current.Voice : VoiceTextBox.Text.Trim(),
+            Voice = ReadSelectedVoice(current.Voice),
             ScreenCaptureIntervalMs = ParseOrDefault(ScreenIntervalTextBox.Text, current.ScreenCaptureIntervalMs, 100, 5000),
             OverlayDurationSeconds = ParseOrDefault(OverlaySecondsTextBox.Text, current.OverlayDurationSeconds, 1, 60),
             ScreenshotJpegQuality = current.ScreenshotJpegQuality,
@@ -181,5 +182,42 @@ public partial class MainWindow : Window
         }
 
         return Math.Clamp(parsed, min, max);
+    }
+
+    private void SelectVoice(string voiceName)
+    {
+        if (string.IsNullOrWhiteSpace(voiceName))
+        {
+            VoiceComboBox.SelectedValue = "Kore";
+            return;
+        }
+
+        var existing = GeminiVoiceCatalog.All.FirstOrDefault(option =>
+            string.Equals(option.Name, voiceName, StringComparison.OrdinalIgnoreCase));
+
+        if (existing is null)
+        {
+            existing = new GeminiVoiceOption(voiceName, "Custom");
+            var items = GeminiVoiceCatalog.All.ToList();
+            items.Add(existing);
+            VoiceComboBox.ItemsSource = items;
+        }
+
+        VoiceComboBox.SelectedValue = existing.Name;
+    }
+
+    private string ReadSelectedVoice(string fallback)
+    {
+        if (VoiceComboBox.SelectedValue is string selected && !string.IsNullOrWhiteSpace(selected))
+        {
+            return selected;
+        }
+
+        if (VoiceComboBox.SelectedItem is GeminiVoiceOption option)
+        {
+            return option.Name;
+        }
+
+        return fallback;
     }
 }
