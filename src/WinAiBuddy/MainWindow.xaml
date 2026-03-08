@@ -9,176 +9,185 @@
         WindowStartupLocation="CenterScreen"
         Closing="Window_OnClosing"
         StateChanged="Window_OnStateChanged">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Grid Margin="24">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="220" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+    <Grid>
+        <TabControl TabStripPlacement="Left" Margin="8" Background="Transparent" BorderThickness="0">
+            <TabControl.Resources>
+                <Style TargetType="TabItem">
+                    <Setter Property="Padding" Value="16,12" />
+                    <Setter Property="FontSize" Value="15" />
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="BorderThickness" Value="0" />
+                    <Setter Property="Margin" Value="0,0,0,4" />
+                </Style>
+            </TabControl.Resources>
 
-            <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,20">
-                <TextBlock FontSize="28" FontWeight="SemiBold" Text="Win AI Buddy" />
-                <TextBlock Margin="0,8,0,0" Foreground="#666" TextWrapping="Wrap">
-                    Streams your mic and optional screen frames into Gemini Live, plays streamed audio back, and shows transcribed coaching in the overlay.
-                </TextBlock>
-            </StackPanel>
+            <!-- Dashboard -->
+            <TabItem Header="🏠 Dashboard">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="24">
+                        <TextBlock FontSize="28" FontWeight="SemiBold" Text="Win AI Buddy" />
+                        <TextBlock Margin="0,8,0,0" Foreground="#666" TextWrapping="Wrap">
+                            Streams your mic and optional screen frames into Gemini Live, plays streamed audio back, and shows transcribed coaching in the overlay.
+                        </TextBlock>
 
-            <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Gemini API key" />
-            <PasswordBox x:Name="ApiKeyPasswordBox" Grid.Row="1" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+                        <TextBlock Margin="0,32,0,0" FontWeight="SemiBold" Text="Session Status" />
+                        <TextBlock x:Name="SessionStateTextBlock" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="#555" Text="Stopped" />
 
-            <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Live model" />
-            <TextBox x:Name="LiveModelTextBox" Grid.Row="2" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+                        <TextBlock Margin="0,16,0,0" FontWeight="SemiBold" Text="Application Status" />
+                        <TextBlock x:Name="StatusTextBlock" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="#555" Text="Ready. Add your Gemini API key, then start the live session." />
 
-            <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Voice" />
-            <Grid Grid.Row="3" Grid.Column="1" Margin="0,8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+                        <TextBlock Margin="0,24,0,0" FontWeight="SemiBold" Text="Input transcription" />
+                        <TextBlock x:Name="InputTranscriptTextBlock" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="#555" Text="Nothing heard yet." />
 
-                <ComboBox x:Name="VoiceComboBox"
-                          Grid.Column="0"
-                          Height="32"
-                          DisplayMemberPath="DisplayName"
-                          SelectedValuePath="Name" />
-                <Button Grid.Column="1"
-                        Width="110"
-                        Height="32"
-                        Margin="12,0,0,0"
-                        Click="PreviewVoiceButton_OnClick"
-                        Content="Preview" />
-                <Button Grid.Column="2"
-                        Width="90"
-                        Height="32"
-                        Margin="12,0,0,0"
-                        Click="StopPreviewButton_OnClick"
-                        Content="Stop" />
-            </Grid>
+                        <TextBlock Margin="0,16,0,0" FontWeight="SemiBold" Text="Output transcription" />
+                        <TextBlock x:Name="OutputTranscriptTextBlock" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="#555" Text="No model response yet." />
 
-            <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Screen frame ms" />
-            <TextBox x:Name="ScreenIntervalTextBox" Grid.Row="4" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+                        <StackPanel Orientation="Horizontal" Margin="0,32,0,0">
+                            <Button Width="140" Height="36" Margin="0,0,12,0" Click="StartLiveButton_OnClick" Content="Start Live" />
+                            <Button Width="140" Height="36" Margin="0,0,12,0" Click="StopLiveButton_OnClick" Content="Stop Live" />
+                            <Button Width="160" Height="36" Click="HideToTrayButton_OnClick" Content="Hide To Tray" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
 
-            <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Overlay seconds" />
-            <TextBox x:Name="OverlaySecondsTextBox" Grid.Row="5" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+            <!-- Connection -->
+            <TabItem Header="🔑 Connection">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="24">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
 
-            <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="Overlay style" />
-            <StackPanel Grid.Row="6" Grid.Column="1" Margin="0,8,0,0">
-                <TextBlock Foreground="#555" Text="Use hex colors like #FFFFFF or #FF00FF00. Adjust Overlay opens a draggable preview." />
+                        <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Gemini API key" />
+                        <PasswordBox x:Name="ApiKeyPasswordBox" Grid.Row="0" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
 
-                <TextBlock Margin="0,16,0,0" Text="Overlay opacity" />
-                <Grid Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="80" />
-                    </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Live model" />
+                        <TextBox x:Name="LiveModelTextBox" Grid.Row="1" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
 
-                    <Slider x:Name="OverlayOpacitySlider"
-                            Grid.Column="0"
-                            Minimum="0.15"
-                            Maximum="1.0"
-                            TickFrequency="0.05"
-                            IsSnapToTickEnabled="False"
-                            ValueChanged="OverlayOpacitySlider_OnValueChanged" />
-                    <TextBlock x:Name="OverlayOpacityValueTextBlock"
-                               Grid.Column="1"
-                               Margin="12,0,0,0"
-                               VerticalAlignment="Center"
-                               HorizontalAlignment="Right"
-                               Text="0.94" />
-                </Grid>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="System prompt" />
+                        <TextBox x:Name="SystemPromptTextBox" Grid.Row="2" Grid.Column="1" Margin="0,8" MinHeight="250" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
 
-                <TextBlock Margin="0,16,0,0" Text="Text color" />
-                <TextBox x:Name="OverlayTextColorTextBox"
-                         Margin="0,8,0,0"
-                         Height="32"
-                         VerticalContentAlignment="Center" />
+                        <Button Grid.Row="3" Grid.Column="1" Width="120" Height="36" Margin="0,24,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Click="SaveButton_OnClick" Content="Save" />
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
 
-                <TextBlock Margin="0,16,0,0" Text="Outline color" />
-                <TextBox x:Name="OverlayOutlineColorTextBox"
-                         Margin="0,8,0,0"
-                         Height="32"
-                         VerticalContentAlignment="Center" />
+            <!-- Audio & Capture -->
+            <TabItem Header="🎤 Audio &amp; Capture">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="24">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
 
-                <TextBlock Margin="0,16,0,0" Text="Outline thickness" />
-                <TextBox x:Name="OverlayOutlineThicknessTextBox"
-                         Margin="0,8,0,0"
-                         Height="32"
-                         VerticalContentAlignment="Center" />
+                        <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Voice" />
+                        <Grid Grid.Row="0" Grid.Column="1" Margin="0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
 
-                <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
-                    <Button Width="140" Height="36" Margin="0,0,12,0" Click="AdjustOverlayButton_OnClick" Content="Adjust Overlay" />
-                    <Button Width="120" Height="36" Margin="0,0,12,0" Click="LockOverlayButton_OnClick" Content="Lock Overlay" />
-                    <Button Width="140" Height="36" Click="ResetOverlayPositionButton_OnClick" Content="Reset Position" />
-                </StackPanel>
-            </StackPanel>
+                            <ComboBox x:Name="VoiceComboBox" Grid.Column="0" Height="32" DisplayMemberPath="DisplayName" SelectedValuePath="Name" />
+                            <Button Grid.Column="1" Width="110" Height="32" Margin="12,0,0,0" Click="PreviewVoiceButton_OnClick" Content="Preview" />
+                            <Button Grid.Column="2" Width="90" Height="32" Margin="12,0,0,0" Click="StopPreviewButton_OnClick" Content="Stop" />
+                        </Grid>
+                        
+                        <TextBlock x:Name="VoicePreviewStatusTextBlock" Grid.Row="1" Grid.Column="1" Margin="0,0,0,24" TextWrapping="Wrap" Foreground="#555" Text="Preview a local WAV sample for the selected voice." />
 
-            <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="System prompt" />
-            <StackPanel Grid.Row="7" Grid.Column="1" Margin="0,8,0,0">
-                <TextBox x:Name="SystemPromptTextBox"
-                         MinHeight="140"
-                         AcceptsReturn="True"
-                         TextWrapping="Wrap"
-                         VerticalScrollBarVisibility="Auto" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Screen frame ms" />
+                        <TextBox x:Name="ScreenIntervalTextBox" Grid.Row="2" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
 
-                <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
-                    <Button Width="120" Height="36" Margin="0,0,12,0" Click="SaveButton_OnClick" Content="Save" />
-                    <Button Width="140" Height="36" Margin="0,0,12,0" Click="StartLiveButton_OnClick" Content="Start Live" />
-                    <Button Width="140" Height="36" Margin="0,0,12,0" Click="StopLiveButton_OnClick" Content="Stop Live" />
-                    <Button Width="160" Height="36" Margin="0,0,12,0" Click="OverlayTestButton_OnClick" Content="Test Overlay" />
-                    <Button Width="160" Height="36" Click="HideToTrayButton_OnClick" Content="Hide To Tray" />
-                </StackPanel>
+                        <CheckBox x:Name="StreamScreenFramesCheckBox" Grid.Row="3" Grid.Column="1" Margin="0,16,0,0" Content="Stream screen frames continuously" />
 
-                <CheckBox x:Name="StreamScreenFramesCheckBox" Margin="0,16,0,0" Content="Stream screen frames continuously" />
-                <CheckBox x:Name="AutoStartSessionCheckBox" Margin="0,8,0,0" Content="Auto-start live session on launch" />
-                <CheckBox x:Name="StartMinimizedCheckBox" Margin="0,16,0,0" Content="Start minimized to tray" />
+                        <Button Grid.Row="4" Grid.Column="1" Width="120" Height="36" Margin="0,32,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Click="SaveButton_OnClick" Content="Save" />
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
 
-                <TextBlock Margin="0,16,0,0" FontWeight="SemiBold" Text="Status" />
-                <TextBlock x:Name="StatusTextBlock"
-                           Margin="0,8,0,0"
-                           TextWrapping="Wrap"
-                           Foreground="#555"
-                           Text="Ready. Add your Gemini API key, then start the live session." />
+            <!-- Overlay -->
+            <TabItem Header="📺 Overlay">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="24">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
 
-                <TextBlock Margin="0,16,0,0" FontWeight="SemiBold" Text="Voice sample" />
-                <TextBlock x:Name="VoicePreviewStatusTextBlock"
-                           Margin="0,8,0,0"
-                           TextWrapping="Wrap"
-                           Foreground="#555"
-                           Text="Preview a local WAV sample for the selected voice." />
+                        <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,24" Foreground="#555" Text="Use hex colors like #FFFFFF or #FF00FF00. Adjust Overlay opens a draggable preview." />
 
-                <TextBlock Margin="0,16,0,0" FontWeight="SemiBold" Text="Session" />
-                <TextBlock x:Name="SessionStateTextBlock"
-                           Margin="0,8,0,0"
-                           TextWrapping="Wrap"
-                           Foreground="#555"
-                           Text="Stopped" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Overlay seconds" />
+                        <TextBox x:Name="OverlaySecondsTextBox" Grid.Row="1" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
 
-                <TextBlock Margin="0,16,0,0" FontWeight="SemiBold" Text="Input transcription" />
-                <TextBlock x:Name="InputTranscriptTextBlock"
-                           Margin="0,8,0,0"
-                           TextWrapping="Wrap"
-                           Foreground="#555"
-                           Text="Nothing heard yet." />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Overlay opacity" />
+                        <Grid Grid.Row="2" Grid.Column="1" Margin="0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="80" />
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="OverlayOpacitySlider" Grid.Column="0" Minimum="0.15" Maximum="1.0" TickFrequency="0.05" IsSnapToTickEnabled="False" ValueChanged="OverlayOpacitySlider_OnValueChanged" />
+                            <TextBlock x:Name="OverlayOpacityValueTextBlock" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Right" Text="0.94" />
+                        </Grid>
 
-                <TextBlock Margin="0,16,0,0" FontWeight="SemiBold" Text="Output transcription" />
-                <TextBlock x:Name="OutputTranscriptTextBlock"
-                           Margin="0,8,0,24"
-                           TextWrapping="Wrap"
-                           Foreground="#555"
-                           Text="No model response yet." />
-            </StackPanel>
-        </Grid>
-    </ScrollViewer>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Text color" />
+                        <TextBox x:Name="OverlayTextColorTextBox" Grid.Row="3" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Outline color" />
+                        <TextBox x:Name="OverlayOutlineColorTextBox" Grid.Row="4" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+
+                        <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Outline thickness" />
+                        <TextBox x:Name="OverlayOutlineThicknessTextBox" Grid.Row="5" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+
+                        <StackPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,32,0,0">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                <Button Width="140" Height="36" Margin="0,0,12,0" Click="AdjustOverlayButton_OnClick" Content="Adjust Overlay" />
+                                <Button Width="120" Height="36" Margin="0,0,12,0" Click="LockOverlayButton_OnClick" Content="Lock Overlay" />
+                                <Button Width="140" Height="36" Margin="0,0,12,0" Click="ResetOverlayPositionButton_OnClick" Content="Reset Position" />
+                                <Button Width="160" Height="36" Click="OverlayTestButton_OnClick" Content="Test Overlay" />
+                            </StackPanel>
+                            <Button Width="120" Height="36" HorizontalAlignment="Left" Click="SaveButton_OnClick" Content="Save" />
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- General -->
+            <TabItem Header="⚙️ General">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="24">
+                        <CheckBox x:Name="AutoStartSessionCheckBox" Margin="0,8,0,0" Content="Auto-start live session on launch" />
+                        <CheckBox x:Name="StartMinimizedCheckBox" Margin="0,16,0,0" Content="Start minimized to tray" />
+                        
+                        <Button Width="120" Height="36" Margin="0,32,0,0" HorizontalAlignment="Left" Click="SaveButton_OnClick" Content="Save" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+        </TabControl>
+    </Grid>
 </Window>
