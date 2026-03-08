@@ -2,6 +2,8 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Interop;
+using System.Runtime.InteropServices;
 using WinAiBuddy.Models;
 using WpfBrush = System.Windows.Media.Brush;
 using WpfBrushes = System.Windows.Media.Brushes;
@@ -13,6 +15,16 @@ namespace WinAiBuddy;
 
 public partial class OverlayWindow : Window
 {
+    private static readonly IntPtr HwndTopmost = new(-1);
+    private const int GwlExStyle = -20;
+    private const int WsExTransparent = 0x20;
+    private const int WsExToolWindow = 0x80;
+    private const int WsExNoActivate = 0x08000000;
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoMove = 0x0002;
+    private const uint SwpNoActivate = 0x0010;
+    private const uint SwpShowWindow = 0x0040;
+
     private bool _hasCustomPosition;
     private bool _isEditing;
 
@@ -21,6 +33,7 @@ public partial class OverlayWindow : Window
     public OverlayWindow()
     {
         InitializeComponent();
+        SourceInitialized += OverlayWindow_OnSourceInitialized;
     }
 
     public bool IsEditing => _isEditing;
@@ -69,6 +82,26 @@ public partial class OverlayWindow : Window
         RootGrid.IsHitTestVisible = isEditing;
         EditHintBorder.Visibility = isEditing ? Visibility.Visible : Visibility.Collapsed;
         OverlayBorder.Cursor = isEditing ? System.Windows.Input.Cursors.SizeAll : System.Windows.Input.Cursors.Arrow;
+        UpdateWindowInteractionStyle();
+        EnsureTopmost();
+    }
+
+    public void EnsureTopmost()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        SetWindowPos(
+            handle,
+            HwndTopmost,
+            0,
+            0,
+            0,
+            0,
+            SwpNoMove | SwpNoSize | SwpNoActivate | SwpShowWindow);
     }
 
     public Task FadeInAsync(double targetOpacity)
@@ -195,4 +228,49 @@ public partial class OverlayWindow : Window
 
         return fallback;
     }
+
+    private void OverlayWindow_OnSourceInitialized(object? sender, EventArgs e)
+    {
+        UpdateWindowInteractionStyle();
+        EnsureTopmost();
+    }
+
+    private void UpdateWindowInteractionStyle()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var exStyle = GetWindowLong(handle, GwlExStyle);
+        exStyle |= WsExToolWindow | WsExNoActivate;
+
+        if (!_isEditing)
+        {
+            exStyle |= WsExTransparent;
+        }
+        else
+        {
+            exStyle &= ~WsExTransparent;
+        }
+
+        SetWindowLong(handle, GwlExStyle, exStyle);
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SetWindowPos(
+        IntPtr hWnd,
+        IntPtr hWndInsertAfter,
+        int x,
+        int y,
+        int cx,
+        int cy,
+        uint uFlags);
 }

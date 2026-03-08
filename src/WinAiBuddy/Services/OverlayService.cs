@@ -26,7 +26,12 @@ public sealed class OverlayService
             {
                 _window.Opacity = 0.0;
                 _window.Show();
+                _window.EnsureTopmost();
                 await _window.FadeInAsync(1.0);
+            }
+            else
+            {
+                _window.EnsureTopmost();
             }
         });
 
@@ -65,7 +70,12 @@ public sealed class OverlayService
             {
                 _window.Opacity = 0.0;
                 _window.Show();
+                _window.EnsureTopmost();
                 await _window.FadeInAsync(1.0);
+            }
+            else
+            {
+                _window.EnsureTopmost();
             }
         });
     }
