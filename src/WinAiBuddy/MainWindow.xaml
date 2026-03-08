@@ -51,11 +51,21 @@
                 </ScrollViewer>
             </TabItem>
 
-            <!-- Connection -->
-            <TabItem Header="🔑 Connection">
+            <!-- Connection & Model -->
+            <TabItem Header="🔑 Connection &amp; Model">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <Grid Margin="24">
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -72,10 +82,64 @@
                         <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Live model" />
                         <TextBox x:Name="LiveModelTextBox" Grid.Row="1" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="System prompt" />
-                        <TextBox x:Name="SystemPromptTextBox" Grid.Row="2" Grid.Column="1" Margin="0,8" MinHeight="250" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="Model options" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,8,0,0" Foreground="#555" TextWrapping="Wrap"
+                                   Text="These settings map to Gemini LiveConnectConfig. Affective dialog and proactive audio use the v1alpha preview API surface." />
 
-                        <Button Grid.Row="3" Grid.Column="1" Width="120" Height="36" Margin="0,24,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Click="SaveButton_OnClick" Content="Save" />
+                        <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Media resolution" />
+                        <ComboBox x:Name="MediaResolutionComboBox" Grid.Row="3" Grid.Column="1" Margin="0,8" Height="32" />
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,12,16,8" VerticalAlignment="Top" Text="Affective dialog" />
+                        <StackPanel Grid.Row="4" Grid.Column="1" Margin="0,8,0,0">
+                            <CheckBox x:Name="EnableAffectiveDialogCheckBox" Content="Enable emotion-aware responses" />
+                            <TextBlock Margin="0,6,0,0" Foreground="#555" TextWrapping="Wrap"
+                                       Text="If enabled, the model will detect emotional tone and adapt how it responds." />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,12,16,8" VerticalAlignment="Top" Text="Proactivity" />
+                        <StackPanel Grid.Row="5" Grid.Column="1" Margin="0,8,0,0">
+                            <CheckBox x:Name="EnableProactiveAudioCheckBox" Content="Enable proactive audio" />
+                            <TextBlock Margin="0,6,0,0" Foreground="#555" TextWrapping="Wrap"
+                                       Text="Lets Gemini decide when to respond and when to ignore irrelevant background input." />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,12,16,8" VerticalAlignment="Top" Text="Context compression" />
+                        <StackPanel Grid.Row="6" Grid.Column="1" Margin="0,8,0,0">
+                            <CheckBox x:Name="EnableContextCompressionCheckBox" Content="Enable context window compression" />
+                            <TextBlock Margin="0,6,0,0" Foreground="#555" TextWrapping="Wrap"
+                                       Text="Compresses older session history to help long-running conversations stay inside the context window." />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Compression trigger tokens" />
+                        <TextBox x:Name="ContextCompressionTriggerTokensTextBox" Grid.Row="7" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+
+                        <TextBlock Grid.Row="8" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Compression target tokens" />
+                        <TextBox x:Name="ContextCompressionTargetTokensTextBox" Grid.Row="8" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+
+                        <TextBlock Grid.Row="9" Grid.Column="0" Margin="0,12,16,8" VerticalAlignment="Top" Text="Thinking" />
+                        <StackPanel Grid.Row="9" Grid.Column="1" Margin="0,8,0,0">
+                            <CheckBox x:Name="EnableThinkingConfigCheckBox" Content="Enable thinking configuration" />
+                            <TextBlock Margin="0,6,0,0" Foreground="#555" TextWrapping="Wrap"
+                                       Text="Budget -1 keeps the model default, 0 disables thinking, and positive values request a custom token budget." />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="10" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Thinking budget" />
+                        <TextBox x:Name="ThinkingBudgetTextBox" Grid.Row="10" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+
+                        <TextBlock Grid.Row="11" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Thinking level" />
+                        <ComboBox x:Name="ThinkingLevelComboBox" Grid.Row="11" Grid.Column="1" Margin="0,8" Height="32" />
+
+                        <TextBlock Grid.Row="12" Grid.Column="0" Margin="0,12,16,8" VerticalAlignment="Top" Text="Thought summaries" />
+                        <StackPanel Grid.Row="12" Grid.Column="1" Margin="0,8,0,0">
+                            <CheckBox x:Name="IncludeThoughtsCheckBox" Content="Request thought summaries" />
+                            <TextBlock Margin="0,6,0,0" Foreground="#555" TextWrapping="Wrap"
+                                       Text="These are metadata summaries from the model. The app keeps them out of the overlay and user-facing logs." />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="13" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="System prompt" />
+                        <TextBox x:Name="SystemPromptTextBox" Grid.Row="13" Grid.Column="1" Margin="0,8" MinHeight="250" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
+
+                        <Button Grid.Row="14" Grid.Column="1" Width="120" Height="36" Margin="0,24,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Click="SaveButton_OnClick" Content="Save" />
                     </Grid>
                 </ScrollViewer>
             </TabItem>

@@ -6,6 +6,26 @@ public sealed class AppSettings
 
     public string LiveModel { get; set; } = "gemini-2.5-flash-native-audio-preview-12-2025";
 
+    public bool EnableAffectiveDialog { get; set; }
+
+    public bool EnableProactiveAudio { get; set; }
+
+    public bool EnableContextWindowCompression { get; set; }
+
+    public int ContextCompressionTriggerTokens { get; set; } = 24000;
+
+    public int ContextCompressionTargetTokens { get; set; } = 12000;
+
+    public string MediaResolution { get; set; } = "Low";
+
+    public bool EnableThinkingConfig { get; set; }
+
+    public int ThinkingBudget { get; set; } = -1;
+
+    public string ThinkingLevel { get; set; } = "Default";
+
+    public bool IncludeThoughts { get; set; }
+
     public string Voice { get; set; } = "Kore";
 
     public string MicrophoneDeviceName { get; set; } = string.Empty;

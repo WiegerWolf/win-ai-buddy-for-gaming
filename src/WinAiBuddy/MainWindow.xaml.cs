@@ -47,6 +47,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         System.Windows.DataObject.AddPastingHandler(ScreenIntervalTextBox, ScreenIntervalTextBox_OnPasting);
         VoiceComboBox.ItemsSource = GeminiVoiceCatalog.All;
+        InitializeModelOptionLists();
         LogsListBox.ItemsSource = _conversationLogEntries;
         ReloadCaptureSources();
         LoadSettings(_settingsService.Current);
@@ -97,6 +98,16 @@ public partial class MainWindow : Window
     {
         ApiKeyPasswordBox.Password = settings.ApiKey;
         LiveModelTextBox.Text = settings.LiveModel;
+        SelectMediaResolution(settings.MediaResolution);
+        EnableAffectiveDialogCheckBox.IsChecked = settings.EnableAffectiveDialog;
+        EnableProactiveAudioCheckBox.IsChecked = settings.EnableProactiveAudio;
+        EnableContextCompressionCheckBox.IsChecked = settings.EnableContextWindowCompression;
+        ContextCompressionTriggerTokensTextBox.Text = settings.ContextCompressionTriggerTokens.ToString(CultureInfo.InvariantCulture);
+        ContextCompressionTargetTokensTextBox.Text = settings.ContextCompressionTargetTokens.ToString(CultureInfo.InvariantCulture);
+        EnableThinkingConfigCheckBox.IsChecked = settings.EnableThinkingConfig;
+        ThinkingBudgetTextBox.Text = settings.ThinkingBudget.ToString(CultureInfo.InvariantCulture);
+        SelectThinkingLevel(settings.ThinkingLevel);
+        IncludeThoughtsCheckBox.IsChecked = settings.IncludeThoughts;
         SelectVoice(settings.Voice);
         SelectMicrophone(settings.MicrophoneDeviceName);
         SelectScreenSource(settings.ScreenDeviceName);
@@ -128,6 +139,28 @@ public partial class MainWindow : Window
         {
             ApiKey = ApiKeyPasswordBox.Password.Trim(),
             LiveModel = string.IsNullOrWhiteSpace(LiveModelTextBox.Text) ? current.LiveModel : LiveModelTextBox.Text.Trim(),
+            EnableAffectiveDialog = EnableAffectiveDialogCheckBox.IsChecked == true,
+            EnableProactiveAudio = EnableProactiveAudioCheckBox.IsChecked == true,
+            EnableContextWindowCompression = EnableContextCompressionCheckBox.IsChecked == true,
+            ContextCompressionTriggerTokens = ParseOrDefault(
+                ContextCompressionTriggerTokensTextBox.Text,
+                current.ContextCompressionTriggerTokens,
+                1,
+                1_000_000),
+            ContextCompressionTargetTokens = ParseOrDefault(
+                ContextCompressionTargetTokensTextBox.Text,
+                current.ContextCompressionTargetTokens,
+                1,
+                1_000_000),
+            MediaResolution = ReadSelectedMediaResolution(current.MediaResolution),
+            EnableThinkingConfig = EnableThinkingConfigCheckBox.IsChecked == true,
+            ThinkingBudget = ParseOrDefault(
+                ThinkingBudgetTextBox.Text,
+                current.ThinkingBudget,
+                -1,
+                1_000_000),
+            ThinkingLevel = ReadSelectedThinkingLevel(current.ThinkingLevel),
+            IncludeThoughts = IncludeThoughtsCheckBox.IsChecked == true,
             Voice = ReadSelectedVoice(current.Voice),
             MicrophoneDeviceName = ReadSelectedMicrophone(current.MicrophoneDeviceName),
             MicrophoneGain = Math.Clamp(MicrophoneGainSlider.Value, 0.0, 3.0),
@@ -577,6 +610,26 @@ public partial class MainWindow : Window
         StatusTextBlock.Text = message;
     }
 
+    private void InitializeModelOptionLists()
+    {
+        MediaResolutionComboBox.ItemsSource = new[]
+        {
+            "Default",
+            "Low",
+            "Medium",
+            "High"
+        };
+
+        ThinkingLevelComboBox.ItemsSource = new[]
+        {
+            "Default",
+            "Minimal",
+            "Low",
+            "Medium",
+            "High"
+        };
+    }
+
     private static int ParseOrDefault(string? value, int fallback, int min, int max)
     {
         if (!int.TryParse(value, out var parsed))
@@ -743,6 +796,32 @@ public partial class MainWindow : Window
         VoiceComboBox.SelectedValue = existing.Name;
     }
 
+    private void SelectMediaResolution(string value)
+    {
+        var selected = string.IsNullOrWhiteSpace(value) ? "Default" : value.Trim();
+        if (!MediaResolutionComboBox.Items.Cast<string>()
+                .Any(item => string.Equals(item, selected, StringComparison.OrdinalIgnoreCase)))
+        {
+            selected = "Default";
+        }
+
+        MediaResolutionComboBox.SelectedItem = MediaResolutionComboBox.Items.Cast<string>()
+            .First(item => string.Equals(item, selected, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void SelectThinkingLevel(string value)
+    {
+        var selected = string.IsNullOrWhiteSpace(value) ? "Default" : value.Trim();
+        if (!ThinkingLevelComboBox.Items.Cast<string>()
+                .Any(item => string.Equals(item, selected, StringComparison.OrdinalIgnoreCase)))
+        {
+            selected = "Default";
+        }
+
+        ThinkingLevelComboBox.SelectedItem = ThinkingLevelComboBox.Items.Cast<string>()
+            .First(item => string.Equals(item, selected, StringComparison.OrdinalIgnoreCase));
+    }
+
     private void SelectMicrophone(string deviceName)
     {
         var devices = (MicrophoneComboBox.ItemsSource as IEnumerable<AudioInputDeviceOption>)?.ToList()
@@ -790,6 +869,26 @@ public partial class MainWindow : Window
         if (VoiceComboBox.SelectedItem is GeminiVoiceOption option)
         {
             return option.Name;
+        }
+
+        return fallback;
+    }
+
+    private string ReadSelectedMediaResolution(string fallback)
+    {
+        if (MediaResolutionComboBox.SelectedItem is string selected && !string.IsNullOrWhiteSpace(selected))
+        {
+            return selected;
+        }
+
+        return fallback;
+    }
+
+    private string ReadSelectedThinkingLevel(string fallback)
+    {
+        if (ThinkingLevelComboBox.SelectedItem is string selected && !string.IsNullOrWhiteSpace(selected))
+        {
+            return selected;
         }
 
         return fallback;

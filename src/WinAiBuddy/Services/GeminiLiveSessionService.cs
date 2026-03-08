@@ -45,13 +45,22 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
             apiKey: settings.ApiKey,
             httpOptions: new HttpOptions
             {
-                ApiVersion = "v1beta"
+                ApiVersion = RequiresV1Alpha(settings) ? "v1alpha" : "v1beta"
             });
 
         var config = new LiveConnectConfig
         {
             ResponseModalities = new List<Modality> { Modality.Audio },
-            MediaResolution = MediaResolution.MediaResolutionLow,
+            EnableAffectiveDialog = settings.EnableAffectiveDialog,
+            MediaResolution = ParseMediaResolution(settings.MediaResolution),
+            Proactivity = settings.EnableProactiveAudio
+                ? new ProactivityConfig
+                {
+                    ProactiveAudio = true
+                }
+                : null,
+            ContextWindowCompression = BuildContextWindowCompression(settings),
+            ThinkingConfig = BuildThinkingConfig(settings),
             SystemInstruction = new Content
             {
                 Parts = new List<Part>
@@ -407,5 +416,71 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
     {
         await StopAsync();
         _sendLock.Dispose();
+    }
+
+    private static bool RequiresV1Alpha(AppSettings settings)
+    {
+        return settings.EnableAffectiveDialog || settings.EnableProactiveAudio;
+    }
+
+    private static ContextWindowCompressionConfig? BuildContextWindowCompression(AppSettings settings)
+    {
+        if (!settings.EnableContextWindowCompression)
+        {
+            return null;
+        }
+
+        var config = new ContextWindowCompressionConfig
+        {
+            TriggerTokens = Math.Max(1, settings.ContextCompressionTriggerTokens),
+            SlidingWindow = new SlidingWindow()
+        };
+
+        if (settings.ContextCompressionTargetTokens > 0)
+        {
+            config.SlidingWindow.TargetTokens = settings.ContextCompressionTargetTokens;
+        }
+
+        return config;
+    }
+
+    private static ThinkingConfig? BuildThinkingConfig(AppSettings settings)
+    {
+        if (!settings.EnableThinkingConfig)
+        {
+            return null;
+        }
+
+        return new ThinkingConfig
+        {
+            IncludeThoughts = settings.IncludeThoughts,
+            ThinkingBudget = settings.ThinkingBudget,
+            ThinkingLevel = ParseThinkingLevel(settings.ThinkingLevel)
+        };
+    }
+
+    private static MediaResolution? ParseMediaResolution(string? value)
+    {
+        return value?.Trim().ToLowerInvariant() switch
+        {
+            "default" or "" => (MediaResolution?)null,
+            "low" => MediaResolution.MediaResolutionLow,
+            "medium" => MediaResolution.MediaResolutionMedium,
+            "high" => MediaResolution.MediaResolutionHigh,
+            _ => MediaResolution.MediaResolutionLow
+        };
+    }
+
+    private static ThinkingLevel? ParseThinkingLevel(string? value)
+    {
+        return value?.Trim().ToLowerInvariant() switch
+        {
+            "default" or "" => (ThinkingLevel?)null,
+            "minimal" => ThinkingLevel.Minimal,
+            "low" => ThinkingLevel.Low,
+            "medium" => ThinkingLevel.Medium,
+            "high" => ThinkingLevel.High,
+            _ => (ThinkingLevel?)null
+        };
     }
 }
