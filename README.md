@@ -94,4 +94,5 @@ Defaults:
 - Gemini Live sessions can only use one response modality per session. This app uses `AUDIO` plus transcription events for text display.
 - Per the current Live API docs, audio plus video sessions are shorter-lived than audio-only sessions, so long-running play sessions may need reconnect logic in a future pass.
 - Competitive games with anti-cheat may block capture or overlays.
+- The overlay works best with windowed or borderless fullscreen games. True exclusive fullscreen games may stay above normal desktop overlays, so the overlay might not appear there.
 - The current MVP captures the primary monitor instead of a specific game window.

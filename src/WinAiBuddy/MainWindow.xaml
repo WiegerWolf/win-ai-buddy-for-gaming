@@ -404,6 +404,9 @@
                                         <StackPanel>
                                             <TextBlock Text="Overlay Appearance"
                                                        Style="{StaticResource CardHeader}" />
+                                            <TextBlock Margin="0,8,0,12"
+                                                       Style="{StaticResource FieldDescription}"
+                                                       Text="Overlay works best with windowed or borderless fullscreen games. Windows may keep true exclusive fullscreen games above desktop overlays, so the overlay might not appear there." />
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="180" />
