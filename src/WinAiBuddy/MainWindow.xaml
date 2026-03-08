@@ -91,6 +91,9 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
@@ -119,24 +122,64 @@
                                   Grid.Column="1"
                                   Margin="0,8"
                                   Height="32"
+                                  SelectionChanged="MicrophoneComboBox_OnSelectionChanged"
                                   DisplayMemberPath="DisplayName"
                                   SelectedValuePath="DeviceName" />
 
-                        <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Screen source" />
+                        <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Mic input level" />
+                        <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,8,0,0">
+                            <ProgressBar x:Name="MicrophoneLevelProgressBar"
+                                         Height="16"
+                                         Minimum="0"
+                                         Maximum="100"
+                                         Value="0" />
+                            <TextBlock x:Name="MicrophonePreviewStatusTextBlock"
+                                       Margin="0,8,0,0"
+                                       Foreground="#555"
+                                       Text="Select a microphone to preview its live level." />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Screen source" />
                         <ComboBox x:Name="ScreenSourceComboBox"
-                                  Grid.Row="3"
+                                  Grid.Row="4"
                                   Grid.Column="1"
                                   Margin="0,8"
                                   Height="32"
+                                  SelectionChanged="ScreenSourceComboBox_OnSelectionChanged"
                                   DisplayMemberPath="DisplayName"
                                   SelectedValuePath="DeviceName" />
 
-                        <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Screen frame ms" />
-                        <TextBox x:Name="ScreenIntervalTextBox" Grid.Row="4" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+                        <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="Screen preview" />
+                        <StackPanel Grid.Row="5" Grid.Column="1" Margin="0,8,0,0">
+                            <Border Width="420"
+                                    Height="236"
+                                    Background="#111"
+                                    BorderBrush="#33000000"
+                                    BorderThickness="1"
+                                    CornerRadius="12">
+                                <Grid>
+                                    <Image x:Name="ScreenPreviewImage"
+                                           Stretch="Uniform"
+                                           SnapsToDevicePixels="True" />
+                                    <TextBlock x:Name="ScreenPreviewPlaceholderTextBlock"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="#CCFFFFFF"
+                                               Text="Loading screen preview..." />
+                                </Grid>
+                            </Border>
+                            <TextBlock x:Name="ScreenPreviewStatusTextBlock"
+                                       Margin="0,8,0,0"
+                                       Foreground="#555"
+                                       Text="Live preview of the selected screen." />
+                        </StackPanel>
 
-                        <CheckBox x:Name="StreamScreenFramesCheckBox" Grid.Row="5" Grid.Column="1" Margin="0,16,0,0" Content="Stream screen frames continuously" />
+                        <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Screen frame ms" />
+                        <TextBox x:Name="ScreenIntervalTextBox" Grid.Row="6" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
 
-                        <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" Margin="0,32,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
+                        <CheckBox x:Name="StreamScreenFramesCheckBox" Grid.Row="7" Grid.Column="1" Margin="0,16,0,0" Content="Stream screen frames continuously" />
+
+                        <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal" Margin="0,32,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
                             <Button Width="140" Height="36" Margin="0,0,12,0" Click="RefreshSourcesButton_OnClick" Content="Refresh Sources" />
                             <Button Width="120" Height="36" Click="SaveButton_OnClick" Content="Save" />
                         </StackPanel>

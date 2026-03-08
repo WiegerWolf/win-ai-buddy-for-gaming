@@ -3,7 +3,9 @@ using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 using System.Windows.Media;
+using System.Windows.Threading;
 using WinAiBuddy.Models;
 using WinAiBuddy.Services;
 using WpfColor = System.Windows.Media.Color;
@@ -16,7 +18,10 @@ public partial class MainWindow : Window
     private readonly GameAssistantOrchestrator _orchestrator;
     private readonly OverlayService _overlayService;
     private readonly VoiceSamplePlayer _voiceSamplePlayer;
+    private readonly MicrophoneLevelMonitor _microphoneLevelMonitor;
+    private readonly DispatcherTimer _screenPreviewTimer;
     private bool _allowClose;
+    private int _screenPreviewVersion;
 
     public MainWindow(
         SettingsService settingsService,
@@ -27,11 +32,19 @@ public partial class MainWindow : Window
         _orchestrator = orchestrator;
         _overlayService = overlayService;
         _voiceSamplePlayer = new VoiceSamplePlayer(Path.Combine(AppContext.BaseDirectory, "Assets", "VoiceSamples"));
+        _microphoneLevelMonitor = new MicrophoneLevelMonitor();
+        _screenPreviewTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(900)
+        };
 
         InitializeComponent();
         VoiceComboBox.ItemsSource = GeminiVoiceCatalog.All;
         ReloadCaptureSources();
         LoadSettings(_settingsService.Current);
+        HookPreviewServices();
+        RestartMicPreview();
+        StartScreenPreviewTimer();
 
         _orchestrator.StatusChanged += message => Dispatcher.Invoke(() => SetStatus(message));
         _orchestrator.SessionStateChanged += isRunning => Dispatcher.Invoke(() =>
@@ -66,6 +79,7 @@ public partial class MainWindow : Window
         Show();
         WindowState = WindowState.Normal;
         Activate();
+        ResumeCapturePreviews();
     }
 
     private void LoadSettings(AppSettings settings)
@@ -233,6 +247,7 @@ public partial class MainWindow : Window
 
     private void HideToTrayButton_OnClick(object sender, RoutedEventArgs e)
     {
+        PauseCapturePreviews();
         Hide();
         SetStatus("Window hidden to tray.");
     }
@@ -243,7 +258,29 @@ public partial class MainWindow : Window
         ReloadCaptureSources();
         SelectMicrophone(current.MicrophoneDeviceName);
         SelectScreenSource(current.ScreenDeviceName);
+        RestartMicPreview();
+        _ = RefreshScreenPreviewAsync();
         SetStatus("Audio and screen sources refreshed.");
+    }
+
+    private void MicrophoneComboBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsInitialized)
+        {
+            return;
+        }
+
+        RestartMicPreview();
+    }
+
+    private async void ScreenSourceComboBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsInitialized)
+        {
+            return;
+        }
+
+        await RefreshScreenPreviewAsync();
     }
 
     private void OverlayOpacitySlider_OnValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -353,6 +390,7 @@ public partial class MainWindow : Window
         }
 
         e.Cancel = true;
+        PauseCapturePreviews();
         Hide();
         SetStatus("Still running in the tray. Use the tray icon to reopen or exit.");
 
@@ -368,6 +406,7 @@ public partial class MainWindow : Window
     {
         if (WindowState == WindowState.Minimized)
         {
+            PauseCapturePreviews();
             Hide();
             SetStatus("Window minimized to tray.");
         }
@@ -421,6 +460,96 @@ public partial class MainWindow : Window
     {
         MicrophoneComboBox.ItemsSource = AudioRecordingService.GetInputDevices();
         ScreenSourceComboBox.ItemsSource = ScreenCaptureService.GetScreens();
+    }
+
+    private void HookPreviewServices()
+    {
+        _microphoneLevelMonitor.LevelChanged += level => Dispatcher.Invoke(() =>
+        {
+            MicrophoneLevelProgressBar.Value = Math.Round(level * 100, 0);
+        });
+
+        _microphoneLevelMonitor.StatusChanged += message => Dispatcher.Invoke(() =>
+        {
+            MicrophonePreviewStatusTextBlock.Text = message;
+        });
+
+        _screenPreviewTimer.Tick += async (_, _) => await RefreshScreenPreviewAsync();
+    }
+
+    private void ResumeCapturePreviews()
+    {
+        RestartMicPreview();
+        StartScreenPreviewTimer();
+    }
+
+    private void PauseCapturePreviews()
+    {
+        _screenPreviewTimer.Stop();
+        _microphoneLevelMonitor.Stop();
+    }
+
+    private void RestartMicPreview()
+    {
+        var preferredMic = ReadSelectedMicrophone(_settingsService.Current.MicrophoneDeviceName);
+        _microphoneLevelMonitor.Start(preferredMic);
+    }
+
+    private void StartScreenPreviewTimer()
+    {
+        if (!_screenPreviewTimer.IsEnabled)
+        {
+            _screenPreviewTimer.Start();
+        }
+
+        _ = RefreshScreenPreviewAsync();
+    }
+
+    private async Task RefreshScreenPreviewAsync()
+    {
+        var previewRequest = Interlocked.Increment(ref _screenPreviewVersion);
+        var selectedScreen = ReadSelectedScreenSource(_settingsService.Current.ScreenDeviceName);
+
+        try
+        {
+            ScreenPreviewStatusTextBlock.Text = "Refreshing screen preview...";
+
+            var bytes = await Task.Run(() =>
+            {
+                var capture = new ScreenCaptureService().CaptureMonitorJpeg(selectedScreen, 55);
+                return capture.Bytes;
+            });
+
+            if (previewRequest != _screenPreviewVersion)
+            {
+                return;
+            }
+
+            using var stream = new MemoryStream(bytes);
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.StreamSource = stream;
+            image.EndInit();
+            image.Freeze();
+
+            ScreenPreviewImage.Source = image;
+            ScreenPreviewPlaceholderTextBlock.Visibility = Visibility.Collapsed;
+            ScreenPreviewStatusTextBlock.Text = string.IsNullOrWhiteSpace(selectedScreen)
+                ? "Showing the primary screen preview."
+                : $"Showing preview for {selectedScreen}.";
+        }
+        catch (Exception ex)
+        {
+            if (previewRequest != _screenPreviewVersion)
+            {
+                return;
+            }
+
+            ScreenPreviewImage.Source = null;
+            ScreenPreviewPlaceholderTextBlock.Visibility = Visibility.Visible;
+            ScreenPreviewStatusTextBlock.Text = $"Screen preview unavailable: {ex.Message}";
+        }
     }
 
     private void SelectVoice(string voiceName)
@@ -534,6 +663,8 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        _screenPreviewTimer.Stop();
+        _microphoneLevelMonitor.Dispose();
         _voiceSamplePlayer.Dispose();
         base.OnClosed(e);
     }
