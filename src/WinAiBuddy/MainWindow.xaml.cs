@@ -30,6 +30,7 @@ public partial class MainWindow : Window
 
         InitializeComponent();
         VoiceComboBox.ItemsSource = GeminiVoiceCatalog.All;
+        ReloadCaptureSources();
         LoadSettings(_settingsService.Current);
 
         _orchestrator.StatusChanged += message => Dispatcher.Invoke(() => SetStatus(message));
@@ -72,6 +73,8 @@ public partial class MainWindow : Window
         ApiKeyPasswordBox.Password = settings.ApiKey;
         LiveModelTextBox.Text = settings.LiveModel;
         SelectVoice(settings.Voice);
+        SelectMicrophone(settings.MicrophoneDeviceName);
+        SelectScreenSource(settings.ScreenDeviceName);
         ScreenIntervalTextBox.Text = settings.ScreenCaptureIntervalMs.ToString();
         OverlaySecondsTextBox.Text = settings.OverlayDurationSeconds.ToString();
         OverlayOpacitySlider.Value = settings.OverlayOpacity;
@@ -98,6 +101,9 @@ public partial class MainWindow : Window
             ApiKey = ApiKeyPasswordBox.Password.Trim(),
             LiveModel = string.IsNullOrWhiteSpace(LiveModelTextBox.Text) ? current.LiveModel : LiveModelTextBox.Text.Trim(),
             Voice = ReadSelectedVoice(current.Voice),
+            MicrophoneDeviceName = ReadSelectedMicrophone(current.MicrophoneDeviceName),
+            ScreenDeviceName = ReadSelectedScreenSource(current.ScreenDeviceName),
+            ScreenCaptureIntervalMs = ParseOrDefault(ScreenIntervalTextBox.Text, current.ScreenCaptureIntervalMs, 100, 5000),
             OverlayDurationSeconds = ParseOrDefault(OverlaySecondsTextBox.Text, current.OverlayDurationSeconds, 1, 60),
             OverlayOpacity = Math.Clamp(OverlayOpacitySlider.Value, 0.0, 1.0),
             OverlayBackgroundColor = NormalizeColorOrDefault(OverlayBgColorTextBox.Text, current.OverlayBackgroundColor),
@@ -229,6 +235,15 @@ public partial class MainWindow : Window
     {
         Hide();
         SetStatus("Window hidden to tray.");
+    }
+
+    private void RefreshSourcesButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        var current = ReadSettingsFromUi();
+        ReloadCaptureSources();
+        SelectMicrophone(current.MicrophoneDeviceName);
+        SelectScreenSource(current.ScreenDeviceName);
+        SetStatus("Audio and screen sources refreshed.");
     }
 
     private void OverlayOpacitySlider_OnValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -402,6 +417,12 @@ public partial class MainWindow : Window
         }
     }
 
+    private void ReloadCaptureSources()
+    {
+        MicrophoneComboBox.ItemsSource = AudioRecordingService.GetInputDevices();
+        ScreenSourceComboBox.ItemsSource = ScreenCaptureService.GetScreens();
+    }
+
     private void SelectVoice(string voiceName)
     {
         if (string.IsNullOrWhiteSpace(voiceName))
@@ -424,6 +445,43 @@ public partial class MainWindow : Window
         VoiceComboBox.SelectedValue = existing.Name;
     }
 
+    private void SelectMicrophone(string deviceName)
+    {
+        var devices = (MicrophoneComboBox.ItemsSource as IEnumerable<AudioInputDeviceOption>)?.ToList()
+            ?? AudioRecordingService.GetInputDevices().ToList();
+
+        if (devices.Count == 0)
+        {
+            MicrophoneComboBox.SelectedItem = null;
+            return;
+        }
+
+        var selected = devices.FirstOrDefault(device =>
+            string.Equals(device.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase))
+            ?? devices[0];
+
+        MicrophoneComboBox.SelectedValue = selected.DeviceName;
+    }
+
+    private void SelectScreenSource(string deviceName)
+    {
+        var screens = (ScreenSourceComboBox.ItemsSource as IEnumerable<ScreenSourceOption>)?.ToList()
+            ?? ScreenCaptureService.GetScreens().ToList();
+
+        if (screens.Count == 0)
+        {
+            ScreenSourceComboBox.SelectedItem = null;
+            return;
+        }
+
+        var selected = screens.FirstOrDefault(screen =>
+            string.Equals(screen.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase))
+            ?? screens.FirstOrDefault(screen => screen.IsPrimary)
+            ?? screens[0];
+
+        ScreenSourceComboBox.SelectedValue = selected.DeviceName;
+    }
+
     private string ReadSelectedVoice(string fallback)
     {
         if (VoiceComboBox.SelectedValue is string selected && !string.IsNullOrWhiteSpace(selected))
@@ -434,6 +492,36 @@ public partial class MainWindow : Window
         if (VoiceComboBox.SelectedItem is GeminiVoiceOption option)
         {
             return option.Name;
+        }
+
+        return fallback;
+    }
+
+    private string ReadSelectedMicrophone(string fallback)
+    {
+        if (MicrophoneComboBox.SelectedValue is string selected && !string.IsNullOrWhiteSpace(selected))
+        {
+            return selected;
+        }
+
+        if (MicrophoneComboBox.SelectedItem is AudioInputDeviceOption option)
+        {
+            return option.DeviceName;
+        }
+
+        return fallback;
+    }
+
+    private string ReadSelectedScreenSource(string fallback)
+    {
+        if (ScreenSourceComboBox.SelectedValue is string selected && !string.IsNullOrWhiteSpace(selected))
+        {
+            return selected;
+        }
+
+        if (ScreenSourceComboBox.SelectedItem is ScreenSourceOption option)
+        {
+            return option.DeviceName;
         }
 
         return fallback;

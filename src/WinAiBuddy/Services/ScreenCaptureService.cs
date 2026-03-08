@@ -8,9 +8,24 @@ namespace WinAiBuddy.Services;
 
 public sealed class ScreenCaptureService
 {
-    public ScreenshotCapture CapturePrimaryMonitorJpeg(int jpegQuality)
+    public static IReadOnlyList<ScreenSourceOption> GetScreens()
     {
-        var bounds = Screen.PrimaryScreen?.Bounds ?? new Rectangle(0, 0, 1920, 1080);
+        return Screen.AllScreens
+            .Select(screen => new ScreenSourceOption(
+                screen.DeviceName,
+                $"{screen.DeviceName} ({screen.Bounds.Width}x{screen.Bounds.Height}){(screen.Primary ? " - Primary" : string.Empty)}",
+                screen.Primary))
+            .ToList();
+    }
+
+    public ScreenshotCapture CaptureMonitorJpeg(string? preferredScreenName, int jpegQuality)
+    {
+        var selectedScreen = Screen.AllScreens.FirstOrDefault(screen =>
+            string.Equals(screen.DeviceName, preferredScreenName, StringComparison.OrdinalIgnoreCase))
+            ?? Screen.PrimaryScreen
+            ?? Screen.AllScreens.FirstOrDefault();
+
+        var bounds = selectedScreen?.Bounds ?? new Rectangle(0, 0, 1920, 1080);
 
         using var bitmap = new Bitmap(bounds.Width, bounds.Height);
         using (var graphics = Graphics.FromImage(bitmap))

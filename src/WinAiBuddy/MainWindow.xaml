@@ -89,6 +89,8 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
@@ -111,12 +113,33 @@
                         
                         <TextBlock x:Name="VoicePreviewStatusTextBlock" Grid.Row="1" Grid.Column="1" Margin="0,0,0,24" TextWrapping="Wrap" Foreground="#555" Text="Preview a local WAV sample for the selected voice." />
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Screen frame ms" />
-                        <TextBox x:Name="ScreenIntervalTextBox" Grid.Row="2" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Microphone input" />
+                        <ComboBox x:Name="MicrophoneComboBox"
+                                  Grid.Row="2"
+                                  Grid.Column="1"
+                                  Margin="0,8"
+                                  Height="32"
+                                  DisplayMemberPath="DisplayName"
+                                  SelectedValuePath="DeviceName" />
 
-                        <CheckBox x:Name="StreamScreenFramesCheckBox" Grid.Row="3" Grid.Column="1" Margin="0,16,0,0" Content="Stream screen frames continuously" />
+                        <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Screen source" />
+                        <ComboBox x:Name="ScreenSourceComboBox"
+                                  Grid.Row="3"
+                                  Grid.Column="1"
+                                  Margin="0,8"
+                                  Height="32"
+                                  DisplayMemberPath="DisplayName"
+                                  SelectedValuePath="DeviceName" />
 
-                        <Button Grid.Row="4" Grid.Column="1" Width="120" Height="36" Margin="0,32,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Click="SaveButton_OnClick" Content="Save" />
+                        <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Screen frame ms" />
+                        <TextBox x:Name="ScreenIntervalTextBox" Grid.Row="4" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+
+                        <CheckBox x:Name="StreamScreenFramesCheckBox" Grid.Row="5" Grid.Column="1" Margin="0,16,0,0" Content="Stream screen frames continuously" />
+
+                        <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" Margin="0,32,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
+                            <Button Width="140" Height="36" Margin="0,0,12,0" Click="RefreshSourcesButton_OnClick" Content="Refresh Sources" />
+                            <Button Width="120" Height="36" Click="SaveButton_OnClick" Content="Save" />
+                        </StackPanel>
                     </Grid>
                 </ScrollViewer>
             </TabItem>

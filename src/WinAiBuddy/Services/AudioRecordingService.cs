@@ -10,17 +10,39 @@ public sealed class AudioRecordingService : IDisposable
 
     public event Action<AudioChunk>? AudioChunkAvailable;
 
-    public void StartStreaming()
+    public static IReadOnlyList<AudioInputDeviceOption> GetInputDevices()
+    {
+        var devices = new List<AudioInputDeviceOption>();
+
+        for (var index = 0; index < WaveIn.DeviceCount; index++)
+        {
+            var capabilities = WaveIn.GetCapabilities(index);
+            devices.Add(new AudioInputDeviceOption(
+                index,
+                capabilities.ProductName,
+                $"{capabilities.ProductName} (Input {index + 1})"));
+        }
+
+        return devices;
+    }
+
+    public void StartStreaming(string? preferredDeviceName = null)
     {
         StopStreaming();
 
-        if (WaveIn.DeviceCount == 0)
+        var devices = GetInputDevices();
+        if (devices.Count == 0)
         {
             throw new InvalidOperationException("No microphone input device was found.");
         }
 
+        var selectedDevice = devices.FirstOrDefault(device =>
+            string.Equals(device.DeviceName, preferredDeviceName, StringComparison.OrdinalIgnoreCase))
+            ?? devices[0];
+
         _recorder = new WaveInEvent
         {
+            DeviceNumber = selectedDevice.DeviceNumber,
             WaveFormat = new WaveFormat(16000, 16, 1),
             BufferMilliseconds = 100
         };

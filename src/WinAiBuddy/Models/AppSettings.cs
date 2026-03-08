@@ -8,6 +8,10 @@ public sealed class AppSettings
 
     public string Voice { get; set; } = "Kore";
 
+    public string MicrophoneDeviceName { get; set; } = string.Empty;
+
+    public string ScreenDeviceName { get; set; } = string.Empty;
+
     public int ScreenCaptureIntervalMs { get; set; } = 1000;
 
     public int OverlayDurationSeconds { get; set; } = 10;

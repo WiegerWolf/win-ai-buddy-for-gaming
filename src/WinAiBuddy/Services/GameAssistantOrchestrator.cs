@@ -69,7 +69,7 @@ public sealed class GameAssistantOrchestrator : IAsyncDisposable
         var settings = _settingsProvider();
         await _liveSessionService.StartAsync(settings, cancellationToken);
 
-        _audioRecordingService.StartStreaming();
+        _audioRecordingService.StartStreaming(settings.MicrophoneDeviceName);
         StartScreenLoop(settings);
 
         StatusChanged?.Invoke("Live session started.");
@@ -111,7 +111,7 @@ public sealed class GameAssistantOrchestrator : IAsyncDisposable
         {
             try
             {
-                var frame = _screenCaptureService.CapturePrimaryMonitorJpeg(settings.ScreenshotJpegQuality);
+                var frame = _screenCaptureService.CaptureMonitorJpeg(settings.ScreenDeviceName, settings.ScreenshotJpegQuality);
                 await _liveSessionService.SendVideoFrameAsync(frame, cancellationToken);
                 await Task.Delay(settings.ScreenCaptureIntervalMs, cancellationToken);
             }
