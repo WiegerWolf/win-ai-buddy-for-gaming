@@ -75,10 +75,13 @@ public partial class MainWindow : Window
         ScreenIntervalTextBox.Text = settings.ScreenCaptureIntervalMs.ToString();
         OverlaySecondsTextBox.Text = settings.OverlayDurationSeconds.ToString();
         OverlayOpacitySlider.Value = settings.OverlayOpacity;
+        OverlayBgOpacitySlider.Value = settings.OverlayBackgroundOpacity;
+        OverlayBgColorTextBox.Text = settings.OverlayBackgroundColor;
         OverlayTextColorTextBox.Text = settings.OverlayTextColor;
         OverlayOutlineColorTextBox.Text = settings.OverlayOutlineColor;
         OverlayOutlineThicknessTextBox.Text = settings.OverlayOutlineThickness.ToString("0.##", CultureInfo.InvariantCulture);
         UpdateOverlayOpacityLabel(settings.OverlayOpacity);
+        OverlayBgOpacityValueTextBlock.Text = settings.OverlayBackgroundOpacity.ToString("0.00", CultureInfo.InvariantCulture);
         SystemPromptTextBox.Text = settings.SystemPrompt;
         StreamScreenFramesCheckBox.IsChecked = settings.StreamScreenFrames;
         AutoStartSessionCheckBox.IsChecked = settings.AutoStartSession;
@@ -94,9 +97,10 @@ public partial class MainWindow : Window
             ApiKey = ApiKeyPasswordBox.Password.Trim(),
             LiveModel = string.IsNullOrWhiteSpace(LiveModelTextBox.Text) ? current.LiveModel : LiveModelTextBox.Text.Trim(),
             Voice = ReadSelectedVoice(current.Voice),
-            ScreenCaptureIntervalMs = ParseOrDefault(ScreenIntervalTextBox.Text, current.ScreenCaptureIntervalMs, 100, 5000),
             OverlayDurationSeconds = ParseOrDefault(OverlaySecondsTextBox.Text, current.OverlayDurationSeconds, 1, 60),
-            OverlayOpacity = Math.Clamp(OverlayOpacitySlider.Value, 0.15, 1.0),
+            OverlayOpacity = Math.Clamp(OverlayOpacitySlider.Value, 0.0, 1.0),
+            OverlayBackgroundColor = NormalizeColorOrDefault(OverlayBgColorTextBox.Text, current.OverlayBackgroundColor),
+            OverlayBackgroundOpacity = Math.Clamp(OverlayBgOpacitySlider.Value, 0.0, 1.0),
             OverlayTextColor = NormalizeColorOrDefault(OverlayTextColorTextBox.Text, current.OverlayTextColor),
             OverlayOutlineColor = NormalizeColorOrDefault(OverlayOutlineColorTextBox.Text, current.OverlayOutlineColor),
             OverlayOutlineThickness = ParseDoubleOrDefault(OverlayOutlineThicknessTextBox.Text, current.OverlayOutlineThickness, 0, 8),
@@ -233,6 +237,78 @@ public partial class MainWindow : Window
         }
 
         UpdateOverlayOpacityLabel(e.NewValue);
+        UpdateOverlayPreview();
+    }
+
+    private void OverlayBgOpacitySlider_OnValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsInitialized) return;
+        OverlayBgOpacityValueTextBlock.Text = e.NewValue.ToString("0.00", CultureInfo.InvariantCulture);
+        UpdateOverlayPreview();
+    }
+
+    private void OverlayPropertyTextBox_OnTextChanged(object sender, TextChangedEventArgs e)
+    {
+        UpdateOverlayPreview();
+    }
+
+    private void UpdateOverlayPreview()
+    {
+        if (!IsInitialized) return;
+
+        try
+        {
+            var settings = ReadSettingsFromUi();
+            _overlayService.ApplySettings(settings);
+        }
+        catch { }
+    }
+
+    private void PickTextColorButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        PickColor(OverlayTextColorTextBox, "#FFFFFFFF");
+    }
+
+    private void PickBgColorButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        PickColor(OverlayBgColorTextBox, "#111111");
+    }
+
+    private void PickOutlineColorButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        PickColor(OverlayOutlineColorTextBox, "#FF000000");
+    }
+
+    private void PickColor(System.Windows.Controls.TextBox target, string fallback)
+    {
+        var hex = NormalizeColorOrDefault(target.Text, fallback);
+        var wpfColor = (WpfColor)System.Windows.Media.ColorConverter.ConvertFromString(hex);
+
+        using var dialog = new System.Windows.Forms.ColorDialog();
+        dialog.Color = System.Drawing.Color.FromArgb(wpfColor.A, wpfColor.R, wpfColor.G, wpfColor.B);
+
+        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+        {
+            var c = dialog.Color;
+            target.Text = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
+        }
+    }
+
+    private void ThicknessUpButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        AdjustThickness(0.5);
+    }
+
+    private void ThicknessDownButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        AdjustThickness(-0.5);
+    }
+
+    private void AdjustThickness(double delta)
+    {
+        var current = ParseDoubleOrDefault(OverlayOutlineThicknessTextBox.Text, _settingsService.Current.OverlayOutlineThickness, 0, 8);
+        var next = Math.Clamp(current + delta, 0, 8);
+        OverlayOutlineThicknessTextBox.Text = next.ToString("0.##", CultureInfo.InvariantCulture);
     }
 
     private void Window_OnClosing(object? sender, CancelEventArgs e)
@@ -245,6 +321,13 @@ public partial class MainWindow : Window
         e.Cancel = true;
         Hide();
         SetStatus("Still running in the tray. Use the tray icon to reopen or exit.");
+
+        if (System.Windows.Application.Current is App app)
+        {
+            app.ShowTrayBalloonTip(
+                "Still running in tray",
+                "Win AI Buddy is still running here in the tray. Double-click the icon to reopen it or use Exit to quit.");
+        }
     }
 
     private void Window_OnStateChanged(object? sender, EventArgs e)

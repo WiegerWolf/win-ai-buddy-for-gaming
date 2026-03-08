@@ -144,26 +144,74 @@
                         <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Overlay seconds" />
                         <TextBox x:Name="OverlaySecondsTextBox" Grid.Row="1" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Overlay opacity" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Overall text opacity" />
                         <Grid Grid.Row="2" Grid.Column="1" Margin="0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="80" />
                             </Grid.ColumnDefinitions>
-                            <Slider x:Name="OverlayOpacitySlider" Grid.Column="0" Minimum="0.15" Maximum="1.0" TickFrequency="0.05" IsSnapToTickEnabled="False" ValueChanged="OverlayOpacitySlider_OnValueChanged" />
+                            <Slider x:Name="OverlayOpacitySlider" Grid.Column="0" Minimum="0.0" Maximum="1.0" TickFrequency="0.05" IsSnapToTickEnabled="False" ValueChanged="OverlayOpacitySlider_OnValueChanged" />
                             <TextBlock x:Name="OverlayOpacityValueTextBlock" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Right" Text="0.94" />
                         </Grid>
 
-                        <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Text color" />
-                        <TextBox x:Name="OverlayTextColorTextBox" Grid.Row="3" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+                        <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Background opacity" />
+                        <Grid Grid.Row="3" Grid.Column="1" Margin="0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="80" />
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="OverlayBgOpacitySlider" Grid.Column="0" Minimum="0.0" Maximum="1.0" TickFrequency="0.05" IsSnapToTickEnabled="False" ValueChanged="OverlayBgOpacitySlider_OnValueChanged" />
+                            <TextBlock x:Name="OverlayBgOpacityValueTextBlock" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Right" Text="0.85" />
+                        </Grid>
 
-                        <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Outline color" />
-                        <TextBox x:Name="OverlayOutlineColorTextBox" Grid.Row="4" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+                        <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Background color" />
+                        <Grid Grid.Row="4" Grid.Column="1" Margin="0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="OverlayBgColorTextBox" Grid.Column="0" Height="32" VerticalContentAlignment="Center" TextChanged="OverlayPropertyTextBox_OnTextChanged" />
+                            <Button Grid.Column="1" Width="80" Height="32" Margin="12,0,0,0" Content="Pick..." Click="PickBgColorButton_OnClick" />
+                        </Grid>
 
-                        <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Outline thickness" />
-                        <TextBox x:Name="OverlayOutlineThicknessTextBox" Grid.Row="5" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+                        <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Text color" />
+                        <Grid Grid.Row="5" Grid.Column="1" Margin="0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="OverlayTextColorTextBox" Grid.Column="0" Height="32" VerticalContentAlignment="Center" TextChanged="OverlayPropertyTextBox_OnTextChanged" />
+                            <Button Grid.Column="1" Width="80" Height="32" Margin="12,0,0,0" Content="Pick..." Click="PickTextColorButton_OnClick" />
+                        </Grid>
 
-                        <StackPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,32,0,0">
+                        <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Outline color" />
+                        <Grid Grid.Row="6" Grid.Column="1" Margin="0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="OverlayOutlineColorTextBox" Grid.Column="0" Height="32" VerticalContentAlignment="Center" TextChanged="OverlayPropertyTextBox_OnTextChanged" />
+                            <Button Grid.Column="1" Width="80" Height="32" Margin="12,0,0,0" Content="Pick..." Click="PickOutlineColorButton_OnClick" />
+                        </Grid>
+
+                        <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Outline thickness" />
+                        <Grid Grid.Row="7" Grid.Column="1" Margin="0,8" Height="32">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="32" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="OverlayOutlineThicknessTextBox" Grid.Column="0" VerticalContentAlignment="Center" TextChanged="OverlayPropertyTextBox_OnTextChanged" />
+                            <Grid Grid.Column="1">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <RepeatButton Grid.Row="0" Content="▲" FontSize="8" Click="ThicknessUpButton_OnClick" Delay="250" Interval="50" />
+                                <RepeatButton Grid.Row="1" Content="▼" FontSize="8" Click="ThicknessDownButton_OnClick" Delay="250" Interval="50" />
+                            </Grid>
+                        </Grid>
+
+                        <StackPanel Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,32,0,0">
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                                 <Button Width="140" Height="36" Margin="0,0,12,0" Click="AdjustOverlayButton_OnClick" Content="Adjust Overlay" />
                                 <Button Width="120" Height="36" Margin="0,0,12,0" Click="LockOverlayButton_OnClick" Content="Lock Overlay" />

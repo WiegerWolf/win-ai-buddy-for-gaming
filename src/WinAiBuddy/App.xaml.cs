@@ -93,6 +93,19 @@ public partial class App : Application
         _notifyIcon.DoubleClick += (_, _) => _mainWindow?.ShowFromTray();
     }
 
+    public void ShowTrayBalloonTip(string title, string text, ToolTipIcon icon = ToolTipIcon.Info, int timeoutMs = 3000)
+    {
+        if (_notifyIcon is null || !_notifyIcon.Visible)
+        {
+            return;
+        }
+
+        _notifyIcon.BalloonTipTitle = title;
+        _notifyIcon.BalloonTipText = text;
+        _notifyIcon.BalloonTipIcon = icon;
+        _notifyIcon.ShowBalloonTip(timeoutMs);
+    }
+
     private async Task ShutdownFromTrayAsync()
     {
         if (_isShuttingDown)
