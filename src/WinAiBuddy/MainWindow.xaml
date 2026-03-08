@@ -195,8 +195,46 @@
                                        Text="Live preview of the selected screen." />
                         </StackPanel>
 
-                        <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Screen frame ms" />
-                        <TextBox x:Name="ScreenIntervalTextBox" Grid.Row="7" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+                        <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="Screen frame ms" />
+                        <StackPanel Grid.Row="7" Grid.Column="1" Margin="0,8,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="ScreenIntervalTextBox"
+                                         Grid.Column="0"
+                                         Height="32"
+                                         MaxLength="4"
+                                         VerticalContentAlignment="Center"
+                                         TextChanged="ScreenIntervalTextBox_OnTextChanged"
+                                         PreviewTextInput="ScreenIntervalTextBox_OnPreviewTextInput" />
+                                <Grid Grid.Column="1" Margin="12,0,0,0" Width="80" Height="32">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <RepeatButton Grid.Row="0"
+                                                  Content="▲"
+                                                  FontSize="8"
+                                                  Click="ScreenIntervalUpButton_OnClick"
+                                                  Delay="250"
+                                                  Interval="70"
+                                                  IsTabStop="False" />
+                                    <RepeatButton Grid.Row="1"
+                                                  Content="▼"
+                                                  FontSize="8"
+                                                  Click="ScreenIntervalDownButton_OnClick"
+                                                  Delay="250"
+                                                  Interval="70"
+                                                  IsTabStop="False" />
+                                </Grid>
+                            </Grid>
+                            <TextBlock Margin="0,8,0,0"
+                                       Foreground="#555"
+                                       TextWrapping="Wrap"
+                                       Text="Controls how often the selected screen is captured for Gemini Live and how often the local preview thumbnail refreshes. Lower values update faster but use more CPU and network." />
+                        </StackPanel>
 
                         <CheckBox x:Name="StreamScreenFramesCheckBox" Grid.Row="8" Grid.Column="1" Margin="0,16,0,0" Content="Stream screen frames continuously" />
 

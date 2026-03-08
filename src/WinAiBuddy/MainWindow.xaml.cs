@@ -1,8 +1,10 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -39,6 +41,7 @@ public partial class MainWindow : Window
         };
 
         InitializeComponent();
+        System.Windows.DataObject.AddPastingHandler(ScreenIntervalTextBox, ScreenIntervalTextBox_OnPasting);
         VoiceComboBox.ItemsSource = GeminiVoiceCatalog.All;
         ReloadCaptureSources();
         LoadSettings(_settingsService.Current);
@@ -92,6 +95,7 @@ public partial class MainWindow : Window
         MicrophoneGainSlider.Value = settings.MicrophoneGain;
         UpdateMicrophoneGainLabel(settings.MicrophoneGain);
         ScreenIntervalTextBox.Text = settings.ScreenCaptureIntervalMs.ToString();
+        UpdateScreenPreviewTimerInterval();
         OverlaySecondsTextBox.Text = settings.OverlayDurationSeconds.ToString();
         OverlayOpacitySlider.Value = settings.OverlayOpacity;
         OverlayBgOpacitySlider.Value = settings.OverlayBackgroundOpacity;
@@ -299,6 +303,46 @@ public partial class MainWindow : Window
         await RefreshScreenPreviewAsync();
     }
 
+    private void ScreenIntervalTextBox_OnPreviewTextInput(object sender, TextCompositionEventArgs e)
+    {
+        e.Handled = !Regex.IsMatch(e.Text, "^[0-9]+$");
+    }
+
+    private void ScreenIntervalTextBox_OnPasting(object sender, DataObjectPastingEventArgs e)
+    {
+        if (!e.SourceDataObject.GetDataPresent(System.Windows.DataFormats.Text))
+        {
+            e.CancelCommand();
+            return;
+        }
+
+        var text = e.SourceDataObject.GetData(System.Windows.DataFormats.Text) as string;
+        if (string.IsNullOrWhiteSpace(text) || !Regex.IsMatch(text, "^[0-9]+$"))
+        {
+            e.CancelCommand();
+        }
+    }
+
+    private void ScreenIntervalTextBox_OnTextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (!IsInitialized)
+        {
+            return;
+        }
+
+        UpdateScreenPreviewTimerInterval();
+    }
+
+    private void ScreenIntervalUpButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        AdjustScreenInterval(100);
+    }
+
+    private void ScreenIntervalDownButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        AdjustScreenInterval(-100);
+    }
+
     private void OverlayOpacitySlider_OnValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (!IsInitialized)
@@ -362,6 +406,13 @@ public partial class MainWindow : Window
             var c = dialog.Color;
             target.Text = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
         }
+    }
+
+    private void AdjustScreenInterval(int delta)
+    {
+        var current = ReadScreenIntervalMs(_settingsService.Current.ScreenCaptureIntervalMs);
+        var next = Math.Clamp(current + delta, 100, 5000);
+        ScreenIntervalTextBox.Text = next.ToString(CultureInfo.InvariantCulture);
     }
 
     private void FontSizeUpButton_OnClick(object sender, RoutedEventArgs e)
@@ -514,12 +565,20 @@ public partial class MainWindow : Window
 
     private void StartScreenPreviewTimer()
     {
+        UpdateScreenPreviewTimerInterval();
+
         if (!_screenPreviewTimer.IsEnabled)
         {
             _screenPreviewTimer.Start();
         }
 
         _ = RefreshScreenPreviewAsync();
+    }
+
+    private void UpdateScreenPreviewTimerInterval()
+    {
+        var intervalMs = ReadScreenIntervalMs(_settingsService.Current.ScreenCaptureIntervalMs);
+        _screenPreviewTimer.Interval = TimeSpan.FromMilliseconds(intervalMs);
     }
 
     private async Task RefreshScreenPreviewAsync()
@@ -681,6 +740,11 @@ public partial class MainWindow : Window
     private void UpdateMicrophoneGainLabel(double gain)
     {
         MicrophoneGainValueTextBlock.Text = $"{Math.Round(gain * 100):0}%";
+    }
+
+    private int ReadScreenIntervalMs(int fallback)
+    {
+        return ParseOrDefault(ScreenIntervalTextBox.Text, fallback, 100, 5000);
     }
 
     protected override void OnClosed(EventArgs e)
