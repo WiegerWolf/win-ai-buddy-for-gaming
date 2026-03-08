@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.IO;
 using System.Windows;
 using WinAiBuddy.Models;
 using WinAiBuddy.Services;
@@ -10,6 +11,7 @@ public partial class MainWindow : Window
     private readonly SettingsService _settingsService;
     private readonly GameAssistantOrchestrator _orchestrator;
     private readonly OverlayService _overlayService;
+    private readonly VoiceSamplePlayer _voiceSamplePlayer;
     private bool _allowClose;
 
     public MainWindow(
@@ -20,6 +22,7 @@ public partial class MainWindow : Window
         _settingsService = settingsService;
         _orchestrator = orchestrator;
         _overlayService = overlayService;
+        _voiceSamplePlayer = new VoiceSamplePlayer(Path.Combine(AppContext.BaseDirectory, "Assets", "VoiceSamples"));
 
         InitializeComponent();
         VoiceComboBox.ItemsSource = GeminiVoiceCatalog.All;
@@ -135,6 +138,26 @@ public partial class MainWindow : Window
         }
     }
 
+    private void PreviewVoiceButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var voice = ReadSelectedVoice(_settingsService.Current.Voice);
+            _voiceSamplePlayer.Play(voice);
+            VoicePreviewStatusTextBlock.Text = $"Playing local sample for {voice}.";
+        }
+        catch (Exception ex)
+        {
+            VoicePreviewStatusTextBlock.Text = $"Preview failed: {ex.Message}";
+        }
+    }
+
+    private void StopPreviewButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        _voiceSamplePlayer.Stop();
+        VoicePreviewStatusTextBlock.Text = "Voice preview stopped.";
+    }
+
     private async void OverlayTestButton_OnClick(object sender, RoutedEventArgs e)
     {
         await _overlayService.ShowMessageAsync(
@@ -219,5 +242,11 @@ public partial class MainWindow : Window
         }
 
         return fallback;
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _voiceSamplePlayer.Dispose();
+        base.OnClosed(e);
     }
 }

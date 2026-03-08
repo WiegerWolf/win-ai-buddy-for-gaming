@@ -41,13 +41,31 @@
             <TextBox x:Name="LiveModelTextBox" Grid.Row="2" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
 
             <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Voice" />
-            <ComboBox x:Name="VoiceComboBox"
-                      Grid.Row="3"
-                      Grid.Column="1"
-                      Margin="0,8"
-                      Height="32"
-                      DisplayMemberPath="DisplayName"
-                      SelectedValuePath="Name" />
+            <Grid Grid.Row="3" Grid.Column="1" Margin="0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <ComboBox x:Name="VoiceComboBox"
+                          Grid.Column="0"
+                          Height="32"
+                          DisplayMemberPath="DisplayName"
+                          SelectedValuePath="Name" />
+                <Button Grid.Column="1"
+                        Width="110"
+                        Height="32"
+                        Margin="12,0,0,0"
+                        Click="PreviewVoiceButton_OnClick"
+                        Content="Preview" />
+                <Button Grid.Column="2"
+                        Width="90"
+                        Height="32"
+                        Margin="12,0,0,0"
+                        Click="StopPreviewButton_OnClick"
+                        Content="Stop" />
+            </Grid>
 
             <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Screen frame ms" />
             <TextBox x:Name="ScreenIntervalTextBox" Grid.Row="4" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
@@ -81,6 +99,13 @@
                            TextWrapping="Wrap"
                            Foreground="#555"
                            Text="Ready. Add your Gemini API key, then start the live session." />
+
+                <TextBlock Margin="0,16,0,0" FontWeight="SemiBold" Text="Voice sample" />
+                <TextBlock x:Name="VoicePreviewStatusTextBlock"
+                           Margin="0,8,0,0"
+                           TextWrapping="Wrap"
+                           Foreground="#555"
+                           Text="Preview a local WAV sample for the selected voice." />
 
                 <TextBlock Margin="0,16,0,0" FontWeight="SemiBold" Text="Session" />
                 <TextBlock x:Name="SessionStateTextBlock"
