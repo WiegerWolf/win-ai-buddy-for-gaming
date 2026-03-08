@@ -97,7 +97,7 @@ public partial class MainWindow : Window
     private void LoadSettings(AppSettings settings)
     {
         ApiKeyPasswordBox.Password = settings.ApiKey;
-        LiveModelTextBox.Text = settings.LiveModel;
+        SelectLiveModel(settings.LiveModel);
         SelectMediaResolution(settings.MediaResolution);
         EnableAffectiveDialogCheckBox.IsChecked = settings.EnableAffectiveDialog;
         EnableProactiveAudioCheckBox.IsChecked = settings.EnableProactiveAudio;
@@ -138,7 +138,7 @@ public partial class MainWindow : Window
         return new AppSettings
         {
             ApiKey = ApiKeyPasswordBox.Password.Trim(),
-            LiveModel = string.IsNullOrWhiteSpace(LiveModelTextBox.Text) ? current.LiveModel : LiveModelTextBox.Text.Trim(),
+            LiveModel = ReadSelectedLiveModel(current.LiveModel),
             EnableAffectiveDialog = EnableAffectiveDialogCheckBox.IsChecked == true,
             EnableProactiveAudio = EnableProactiveAudioCheckBox.IsChecked == true,
             EnableContextWindowCompression = EnableContextCompressionCheckBox.IsChecked == true,
@@ -612,6 +612,11 @@ public partial class MainWindow : Window
 
     private void InitializeModelOptionLists()
     {
+        LiveModelComboBox.ItemsSource = new[]
+        {
+            "gemini-2.5-flash-native-audio-preview-12-2025"
+        };
+
         MediaResolutionComboBox.ItemsSource = new[]
         {
             "Default",
@@ -796,6 +801,22 @@ public partial class MainWindow : Window
         VoiceComboBox.SelectedValue = existing.Name;
     }
 
+    private void SelectLiveModel(string value)
+    {
+        var selected = string.IsNullOrWhiteSpace(value)
+            ? "gemini-2.5-flash-native-audio-preview-12-2025"
+            : value.Trim();
+
+        if (!LiveModelComboBox.Items.Cast<string>()
+                .Any(item => string.Equals(item, selected, StringComparison.OrdinalIgnoreCase)))
+        {
+            selected = "gemini-2.5-flash-native-audio-preview-12-2025";
+        }
+
+        LiveModelComboBox.SelectedItem = LiveModelComboBox.Items.Cast<string>()
+            .First(item => string.Equals(item, selected, StringComparison.OrdinalIgnoreCase));
+    }
+
     private void SelectMediaResolution(string value)
     {
         var selected = string.IsNullOrWhiteSpace(value) ? "Default" : value.Trim();
@@ -869,6 +890,16 @@ public partial class MainWindow : Window
         if (VoiceComboBox.SelectedItem is GeminiVoiceOption option)
         {
             return option.Name;
+        }
+
+        return fallback;
+    }
+
+    private string ReadSelectedLiveModel(string fallback)
+    {
+        if (LiveModelComboBox.SelectedItem is string selected && !string.IsNullOrWhiteSpace(selected))
+        {
+            return selected;
         }
 
         return fallback;
