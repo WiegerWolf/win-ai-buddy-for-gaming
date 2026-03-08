@@ -1,17 +1,47 @@
 # Win AI Buddy for Gaming
 
-This repository contains a Windows desktop app that keeps a Gemini Live session open, streams microphone audio and optional screen frames, plays the streamed model audio, and shows transcription text in an overlay.
+[![Download latest release](https://img.shields.io/github/v/release/WiegerWolf/win-ai-buddy-for-gaming?label=Download%20latest%20release)](https://github.com/WiegerWolf/win-ai-buddy-for-gaming/releases/latest)
+[![All releases](https://img.shields.io/github/downloads/WiegerWolf/win-ai-buddy-for-gaming/total?label=Releases)](https://github.com/WiegerWolf/win-ai-buddy-for-gaming/releases)
 
-## What is included
+Windows desktop app for live Gemini-powered gaming help. It keeps a Gemini Live session open, streams microphone audio and optional screen frames, plays streamed model audio, and shows transcription text in an in-game overlay.
 
-- WPF desktop shell with a settings window
+[Download the latest release](https://github.com/WiegerWolf/win-ai-buddy-for-gaming/releases/latest)
+
+![Win AI Buddy main app](docs/main-window.png)
+
+## Showcase
+
+[![Watch the showcase on YouTube](docs/yt-banner.png)](https://youtu.be/KWATSGGqDfc?si=hlTvdpz91TvQQHeM&t=96)
+
+Watch the app in action: [YouTube showcase](https://youtu.be/KWATSGGqDfc?si=hlTvdpz91TvQQHeM&t=96)
+
+## Highlights
+
+- WPF desktop shell with a tray-friendly live session controller
 - Transparent always-on-top overlay for assistant answers
 - Continuous microphone streaming
-- Optional primary-monitor frame streaming
+- Optional screen-frame streaming
 - Direct Gemini Live integration with the official `Google.GenAI` .NET SDK
 - Streamed PCM audio playback for model responses
-- Input and output transcription display
-- Tray icon with `Open`, `Start Live`, `Stop Live`, and `Exit`
+- Conversation history with restorable saved sessions after stop or crash
+
+## Screenshots
+
+### Main app
+
+![Main window](docs/main-window.png)
+
+### Audio and capture settings
+
+![Capture settings](docs/capture%20settings.png)
+
+### Conversation history
+
+![Conversation pane](docs/conversation.png)
+
+### In-game overlay
+
+![Overlay](docs/overlay.png)
 
 ## Stack
 
@@ -19,11 +49,6 @@ This repository contains a Windows desktop app that keeps a Gemini Live session 
 - WPF
 - Google Gemini Live API via `Google.GenAI`
 - `NAudio` for microphone capture and streamed playback
-
-## Project layout
-
-- `WinAiBuddy.sln`
-- `src/WinAiBuddy/`
 
 ## Run it
 
@@ -43,7 +68,7 @@ An example config is included at [appsettings.example.json](C:\Users\n\Documents
 
 ## Automated releases
 
-GitHub Actions now publishes Windows release zips automatically:
+GitHub Actions publishes Windows release zips automatically:
 
 - Push to `main`: creates a prerelease build in GitHub Releases
 - Push a git tag: creates a tagged release in GitHub Releases
