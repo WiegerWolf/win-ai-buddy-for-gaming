@@ -1,0 +1,102 @@
+<Window x:Class="WinAiBuddy.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Win AI Buddy"
+        Width="920"
+        Height="760"
+        MinWidth="720"
+        MinHeight="620"
+        WindowStartupLocation="CenterScreen"
+        Closing="Window_OnClosing"
+        StateChanged="Window_OnStateChanged">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,20">
+                <TextBlock FontSize="28" FontWeight="SemiBold" Text="Win AI Buddy" />
+                <TextBlock Margin="0,8,0,0" Foreground="#666" TextWrapping="Wrap">
+                    Streams your mic and optional screen frames into Gemini Live, plays streamed audio back, and shows transcribed coaching in the overlay.
+                </TextBlock>
+            </StackPanel>
+
+            <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Gemini API key" />
+            <PasswordBox x:Name="ApiKeyPasswordBox" Grid.Row="1" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+
+            <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Live model" />
+            <TextBox x:Name="LiveModelTextBox" Grid.Row="2" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+
+            <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Voice" />
+            <TextBox x:Name="VoiceTextBox" Grid.Row="3" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+
+            <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Screen frame ms" />
+            <TextBox x:Name="ScreenIntervalTextBox" Grid.Row="4" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+
+            <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Overlay seconds" />
+            <TextBox x:Name="OverlaySecondsTextBox" Grid.Row="5" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+
+            <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="System prompt" />
+            <StackPanel Grid.Row="6" Grid.Column="1" Margin="0,8,0,0">
+                <TextBox x:Name="SystemPromptTextBox"
+                         MinHeight="140"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto" />
+
+                <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                    <Button Width="120" Height="36" Margin="0,0,12,0" Click="SaveButton_OnClick" Content="Save" />
+                    <Button Width="140" Height="36" Margin="0,0,12,0" Click="StartLiveButton_OnClick" Content="Start Live" />
+                    <Button Width="140" Height="36" Margin="0,0,12,0" Click="StopLiveButton_OnClick" Content="Stop Live" />
+                    <Button Width="160" Height="36" Margin="0,0,12,0" Click="OverlayTestButton_OnClick" Content="Test Overlay" />
+                    <Button Width="160" Height="36" Click="HideToTrayButton_OnClick" Content="Hide To Tray" />
+                </StackPanel>
+
+                <CheckBox x:Name="StreamScreenFramesCheckBox" Margin="0,16,0,0" Content="Stream screen frames continuously" />
+                <CheckBox x:Name="AutoStartSessionCheckBox" Margin="0,8,0,0" Content="Auto-start live session on launch" />
+                <CheckBox x:Name="StartMinimizedCheckBox" Margin="0,16,0,0" Content="Start minimized to tray" />
+
+                <TextBlock Margin="0,16,0,0" FontWeight="SemiBold" Text="Status" />
+                <TextBlock x:Name="StatusTextBlock"
+                           Margin="0,8,0,0"
+                           TextWrapping="Wrap"
+                           Foreground="#555"
+                           Text="Ready. Add your Gemini API key, then start the live session." />
+
+                <TextBlock Margin="0,16,0,0" FontWeight="SemiBold" Text="Session" />
+                <TextBlock x:Name="SessionStateTextBlock"
+                           Margin="0,8,0,0"
+                           TextWrapping="Wrap"
+                           Foreground="#555"
+                           Text="Stopped" />
+
+                <TextBlock Margin="0,16,0,0" FontWeight="SemiBold" Text="Input transcription" />
+                <TextBlock x:Name="InputTranscriptTextBlock"
+                           Margin="0,8,0,0"
+                           TextWrapping="Wrap"
+                           Foreground="#555"
+                           Text="Nothing heard yet." />
+
+                <TextBlock Margin="0,16,0,0" FontWeight="SemiBold" Text="Output transcription" />
+                <TextBlock x:Name="OutputTranscriptTextBlock"
+                           Margin="0,8,0,24"
+                           TextWrapping="Wrap"
+                           Foreground="#555"
+                           Text="No model response yet." />
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</Window>
