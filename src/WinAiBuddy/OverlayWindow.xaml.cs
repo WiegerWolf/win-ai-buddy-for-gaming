@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using WinAiBuddy.Models;
 using WpfBrush = System.Windows.Media.Brush;
 using WpfBrushes = System.Windows.Media.Brushes;
@@ -68,6 +69,50 @@ public partial class OverlayWindow : Window
         RootGrid.IsHitTestVisible = isEditing;
         EditHintBorder.Visibility = isEditing ? Visibility.Visible : Visibility.Collapsed;
         OverlayBorder.Cursor = isEditing ? System.Windows.Input.Cursors.SizeAll : System.Windows.Input.Cursors.Arrow;
+    }
+
+    public Task FadeInAsync(double targetOpacity)
+    {
+        var tcs = new TaskCompletionSource();
+        var animation = new DoubleAnimation
+        {
+            From = Opacity,
+            To = targetOpacity,
+            Duration = TimeSpan.FromMilliseconds(150),
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+        };
+
+        animation.Completed += (s, e) =>
+        {
+            Opacity = targetOpacity;
+            BeginAnimation(OpacityProperty, null);
+            tcs.TrySetResult();
+        };
+
+        BeginAnimation(OpacityProperty, animation);
+        return tcs.Task;
+    }
+
+    public Task FadeOutAsync()
+    {
+        var tcs = new TaskCompletionSource();
+        var animation = new DoubleAnimation
+        {
+            From = Opacity,
+            To = 0.0,
+            Duration = TimeSpan.FromMilliseconds(400),
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
+        };
+
+        animation.Completed += (s, e) =>
+        {
+            Opacity = 0.0;
+            BeginAnimation(OpacityProperty, null);
+            tcs.TrySetResult();
+        };
+
+        BeginAnimation(OpacityProperty, animation);
+        return tcs.Task;
     }
 
     private void PositionBottomCenter()

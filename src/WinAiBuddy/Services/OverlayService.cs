@@ -18,13 +18,15 @@ public sealed class OverlayService
 
     public async Task ShowMessageAsync(string text, TimeSpan duration)
     {
-        await _window.Dispatcher.InvokeAsync(() =>
+        await _window.Dispatcher.InvokeAsync(async () =>
         {
             _window.ApplySettings(_settingsService.Current);
             _window.SetMessage(text);
             if (!_window.IsVisible)
             {
+                _window.Opacity = 0.0;
                 _window.Show();
+                await _window.FadeInAsync(1.0);
             }
         });
 
@@ -53,7 +55,7 @@ public sealed class OverlayService
     {
         _hideCts?.Cancel();
 
-        await _window.Dispatcher.InvokeAsync(() =>
+        await _window.Dispatcher.InvokeAsync(async () =>
         {
             _window.ApplySettings(_settingsService.Current);
             _window.SetMessage(sampleText);
@@ -61,7 +63,9 @@ public sealed class OverlayService
 
             if (!_window.IsVisible)
             {
+                _window.Opacity = 0.0;
                 _window.Show();
+                await _window.FadeInAsync(1.0);
             }
         });
     }
@@ -70,12 +74,13 @@ public sealed class OverlayService
     {
         _hideCts?.Cancel();
 
-        await _window.Dispatcher.InvokeAsync(() =>
+        await _window.Dispatcher.InvokeAsync(async () =>
         {
             _window.SetEditMode(false);
 
-            if (hideOverlay)
+            if (hideOverlay && _window.IsVisible)
             {
+                await _window.FadeOutAsync();
                 _window.Hide();
             }
         });
@@ -84,10 +89,14 @@ public sealed class OverlayService
     public async Task HideAsync()
     {
         _hideCts?.Cancel();
-        await _window.Dispatcher.InvokeAsync(() =>
+        await _window.Dispatcher.InvokeAsync(async () =>
         {
             _window.SetEditMode(false);
-            _window.Hide();
+            if (_window.IsVisible)
+            {
+                await _window.FadeOutAsync();
+                _window.Hide();
+            }
         });
     }
 
