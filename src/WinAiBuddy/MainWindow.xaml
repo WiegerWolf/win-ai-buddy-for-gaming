@@ -134,6 +134,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
@@ -186,8 +187,25 @@
                             <Button Grid.Column="1" Width="80" Height="32" Margin="12,0,0,0" Content="Pick..." Click="PickTextColorButton_OnClick" />
                         </Grid>
 
-                        <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Outline color" />
+                        <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Font size" />
                         <Grid Grid.Row="6" Grid.Column="1" Margin="0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="OverlayFontSizeTextBox" Grid.Column="0" Height="32" VerticalContentAlignment="Center" TextChanged="OverlayPropertyTextBox_OnTextChanged" />
+                            <Grid Grid.Column="1" Margin="12,0,0,0" Width="80" Height="32">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <RepeatButton Grid.Row="0" Content="▲" FontSize="8" Click="FontSizeUpButton_OnClick" Delay="250" Interval="50" IsTabStop="False" />
+                                <RepeatButton Grid.Row="1" Content="▼" FontSize="8" Click="FontSizeDownButton_OnClick" Delay="250" Interval="50" IsTabStop="False" />
+                            </Grid>
+                        </Grid>
+
+                        <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Outline color" />
+                        <Grid Grid.Row="7" Grid.Column="1" Margin="0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
@@ -196,8 +214,8 @@
                             <Button Grid.Column="1" Width="80" Height="32" Margin="12,0,0,0" Content="Pick..." Click="PickOutlineColorButton_OnClick" />
                         </Grid>
 
-                        <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Outline thickness" />
-                        <Grid Grid.Row="7" Grid.Column="1" Margin="0,8">
+                        <TextBlock Grid.Row="8" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Outline thickness" />
+                        <Grid Grid.Row="8" Grid.Column="1" Margin="0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
@@ -213,7 +231,7 @@
                             </Grid>
                         </Grid>
 
-                        <StackPanel Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,32,0,0">
+                        <StackPanel Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,32,0,0">
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                                 <Button Width="140" Height="36" Margin="0,0,12,0" Click="AdjustOverlayButton_OnClick" Content="Adjust Overlay" />
                                 <Button Width="120" Height="36" Margin="0,0,12,0" Click="LockOverlayButton_OnClick" Content="Lock Overlay" />

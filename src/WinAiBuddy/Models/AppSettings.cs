@@ -14,6 +14,8 @@ public sealed class AppSettings
 
     public double OverlayOpacity { get; set; } = 0.94;
 
+    public double OverlayFontSize { get; set; } = 26.0;
+
     public string OverlayBackgroundColor { get; set; } = "#111111";
 
     public double OverlayBackgroundOpacity { get; set; } = 0.85;

@@ -77,6 +77,7 @@ public partial class MainWindow : Window
         OverlayOpacitySlider.Value = settings.OverlayOpacity;
         OverlayBgOpacitySlider.Value = settings.OverlayBackgroundOpacity;
         OverlayBgColorTextBox.Text = settings.OverlayBackgroundColor;
+        OverlayFontSizeTextBox.Text = settings.OverlayFontSize.ToString("0.##", CultureInfo.InvariantCulture);
         OverlayTextColorTextBox.Text = settings.OverlayTextColor;
         OverlayOutlineColorTextBox.Text = settings.OverlayOutlineColor;
         OverlayOutlineThicknessTextBox.Text = settings.OverlayOutlineThickness.ToString("0.##", CultureInfo.InvariantCulture);
@@ -101,6 +102,7 @@ public partial class MainWindow : Window
             OverlayOpacity = Math.Clamp(OverlayOpacitySlider.Value, 0.0, 1.0),
             OverlayBackgroundColor = NormalizeColorOrDefault(OverlayBgColorTextBox.Text, current.OverlayBackgroundColor),
             OverlayBackgroundOpacity = Math.Clamp(OverlayBgOpacitySlider.Value, 0.0, 1.0),
+            OverlayFontSize = ParseDoubleOrDefault(OverlayFontSizeTextBox.Text, current.OverlayFontSize, 8, 144),
             OverlayTextColor = NormalizeColorOrDefault(OverlayTextColorTextBox.Text, current.OverlayTextColor),
             OverlayOutlineColor = NormalizeColorOrDefault(OverlayOutlineColorTextBox.Text, current.OverlayOutlineColor),
             OverlayOutlineThickness = ParseDoubleOrDefault(OverlayOutlineThicknessTextBox.Text, current.OverlayOutlineThickness, 0, 8),
@@ -292,6 +294,23 @@ public partial class MainWindow : Window
             var c = dialog.Color;
             target.Text = $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
         }
+    }
+
+    private void FontSizeUpButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        AdjustFontSize(2);
+    }
+
+    private void FontSizeDownButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        AdjustFontSize(-2);
+    }
+
+    private void AdjustFontSize(double delta)
+    {
+        var current = ParseDoubleOrDefault(OverlayFontSizeTextBox.Text, _settingsService.Current.OverlayFontSize, 8, 144);
+        var next = Math.Clamp(current + delta, 8, 144);
+        OverlayFontSizeTextBox.Text = next.ToString("0.##", CultureInfo.InvariantCulture);
     }
 
     private void ThicknessUpButton_OnClick(object sender, RoutedEventArgs e)
