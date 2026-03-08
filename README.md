@@ -41,6 +41,13 @@ The app persists settings to:
 
 An example config is included at [appsettings.example.json](C:\Users\n\Documents\win-ai-buddy-for-gaming\src\WinAiBuddy\appsettings.example.json).
 
+## Automated releases
+
+GitHub Actions now publishes Windows release zips automatically:
+
+- Push to `main`: creates a prerelease build in GitHub Releases
+- Push a git tag: creates a tagged release in GitHub Releases
+
 ## Gemini Live flow
 
 The app currently uses one Gemini Live session:
