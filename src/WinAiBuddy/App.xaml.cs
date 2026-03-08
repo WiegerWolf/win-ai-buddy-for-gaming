@@ -15,6 +15,7 @@ public partial class App : Application
     private GeminiLiveSessionService? _liveSessionService;
     private AudioRecordingService? _audioRecordingService;
     private SpeechPlaybackService? _speechPlaybackService;
+    private bool _isShuttingDown;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -58,15 +59,16 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        _orchestrator?.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        _liveSessionService?.DisposeAsync().AsTask().GetAwaiter().GetResult();
         _audioRecordingService?.Dispose();
+        _audioRecordingService = null;
         _speechPlaybackService?.Dispose();
+        _speechPlaybackService = null;
 
         if (_notifyIcon is not null)
         {
             _notifyIcon.Visible = false;
             _notifyIcon.Dispose();
+            _notifyIcon = null;
         }
 
         base.OnExit(e);
@@ -85,20 +87,71 @@ public partial class App : Application
         menu.Items.Add("Open", null, (_, _) => _mainWindow?.ShowFromTray());
         menu.Items.Add("Start Live", null, async (_, _) => await (_orchestrator?.StartLiveSessionAsync() ?? Task.CompletedTask));
         menu.Items.Add("Stop Live", null, async (_, _) => await (_orchestrator?.StopLiveSessionAsync() ?? Task.CompletedTask));
-        menu.Items.Add("Exit", null, (_, _) => ShutdownFromTray());
+        menu.Items.Add("Exit", null, async (_, _) => await ShutdownFromTrayAsync());
 
         _notifyIcon.ContextMenuStrip = menu;
         _notifyIcon.DoubleClick += (_, _) => _mainWindow?.ShowFromTray();
     }
 
-    private void ShutdownFromTray()
+    private async Task ShutdownFromTrayAsync()
     {
+        if (_isShuttingDown)
+        {
+            return;
+        }
+
+        _isShuttingDown = true;
+
+        if (_notifyIcon is not null)
+        {
+            _notifyIcon.Visible = false;
+        }
+
         if (_mainWindow is not null)
         {
             _mainWindow.PrepareForExit();
+        }
+
+        if (_orchestrator is not null)
+        {
+            await DisposeAsyncWithTimeout(_orchestrator.DisposeAsync().AsTask(), TimeSpan.FromSeconds(5));
+            _orchestrator = null;
+        }
+
+        if (_liveSessionService is not null)
+        {
+            await DisposeAsyncWithTimeout(_liveSessionService.DisposeAsync().AsTask(), TimeSpan.FromSeconds(5));
+            _liveSessionService = null;
+        }
+
+        _audioRecordingService?.Dispose();
+        _audioRecordingService = null;
+        _speechPlaybackService?.Dispose();
+        _speechPlaybackService = null;
+
+        if (_notifyIcon is not null)
+        {
+            _notifyIcon.Dispose();
+            _notifyIcon = null;
+        }
+
+        if (_mainWindow is not null)
+        {
             _mainWindow.Close();
+            _mainWindow = null;
         }
 
         Shutdown();
+    }
+
+    private static async Task DisposeAsyncWithTimeout(Task disposeTask, TimeSpan timeout)
+    {
+        try
+        {
+            await disposeTask.WaitAsync(timeout);
+        }
+        catch
+        {
+        }
     }
 }
