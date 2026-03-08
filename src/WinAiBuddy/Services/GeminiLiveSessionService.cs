@@ -9,32 +9,8 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
 {
     private const int MaxBufferedRealtimeInputs = 1000;
     private const string TransparentUnsupportedMessage = "transparent parameter is not supported";
+    private static readonly Regex DuplicateWhitespaceRegex = new(@"\s{2,}", RegexOptions.Compiled);
     private static readonly Regex PunctuationSpacingRegex = new(@"(?<=[,!?;:.])(?=\p{L})", RegexOptions.Compiled);
-    private static readonly Regex GluedWordRegex = new(@"\p{L}{6,}", RegexOptions.Compiled);
-    private static readonly HashSet<string> KnownTranscriptWords = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "a", "about", "ahead", "alert", "all", "allyour", "ambush", "an", "and", "another", "any", "approach",
-        "area", "around", "at", "attack", "away", "back", "bad", "be", "before", "behind", "block", "bonfire",
-        "bomb", "bombs", "boss", "bow", "break", "carefully", "can", "caution", "cautiously", "check", "circle",
-        "clear", "close", "collectible", "compare", "continue", "counter", "cover", "current", "damage", "danger",
-        "death", "deal", "decide", "definitely", "dodge", "don't", "down", "dragon", "earlier", "eight", "elite",
-        "enemies", "enemy", "enough", "equip", "equipment", "estus", "exactly", "explore", "exploring", "fight",
-        "find", "fire", "firebomb", "firebombs", "five", "flask", "flasks", "focus", "fog", "for", "found",
-        "from", "gate", "get", "good", "got", "great", "guy", "guys", "have", "health", "heal", "help", "hidden",
-        "humanity", "i", "if", "immediate", "in", "increase", "inventory", "is", "it", "item", "items", "jump",
-        "jumping", "just", "keep", "kindle", "kindling", "later", "lead", "left", "less", "lets", "light",
-        "likely", "look", "losing", "low", "main", "make", "manage", "mechanics", "menu", "merchant", "might",
-        "more", "move", "need", "new", "next", "nice", "now", "npc", "number", "of", "off", "okay", "on", "one",
-        "only", "or", "other", "out", "over", "parry", "path", "paths", "pick", "place", "plan", "platforms",
-        "powder", "practical", "prepare", "proceed", "progress", "quick", "quickly", "ready", "really", "repair",
-        "respawn", "rest", "return", "reverse", "right", "risk", "roll", "route", "safe", "safer", "save", "scale",
-        "screen", "see", "select", "session", "set", "shield", "shortcut", "shortsword", "should", "side", "single",
-        "situations", "slot", "slots", "slowly", "small", "so", "some", "souls", "space", "speak", "spots",
-        "sword", "switch", "take", "target", "that", "the", "their", "them", "then", "there", "they", "thing",
-        "this", "those", "threat", "through", "time", "timing", "to", "together", "trade", "trap", "try", "up",
-        "use", "useful", "valuable", "very", "vigilant", "wall", "want", "warning", "was", "way", "we", "weapon",
-        "weapons", "well", "what", "when", "where", "while", "white", "with", "work", "working", "you", "your"
-    };
 
     private readonly SemaphoreSlim _sendLock = new(1, 1);
     private readonly SemaphoreSlim _reconnectLock = new(1, 1);
@@ -680,101 +656,8 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         }
 
         var normalized = PunctuationSpacingRegex.Replace(transcript, " ");
-        normalized = GluedWordRegex.Replace(normalized, static match => SplitGluedWord(match.Value));
-        return normalized;
-    }
-
-    private static string SplitGluedWord(string token)
-    {
-        var lowerToken = token.ToLowerInvariant();
-        if (KnownTranscriptWords.Contains(lowerToken))
-        {
-            return token;
-        }
-
-        if (!TrySegmentToken(lowerToken, out var segmentLengths))
-        {
-            return token;
-        }
-
-        var segments = new List<string>(segmentLengths.Count);
-        var index = 0;
-        foreach (var length in segmentLengths)
-        {
-            segments.Add(token.Substring(index, length));
-            index += length;
-        }
-
-        return string.Join(" ", segments);
-    }
-
-    private static bool TrySegmentToken(string token, out List<int> segmentLengths)
-    {
-        segmentLengths = [];
-        if (token.Length < 6)
-        {
-            return false;
-        }
-
-        var best = new List<int>?[token.Length + 1];
-        best[0] = [];
-
-        for (var start = 0; start < token.Length; start++)
-        {
-            var current = best[start];
-            if (current is null)
-            {
-                continue;
-            }
-
-            for (var length = 1; length <= Math.Min(12, token.Length - start); length++)
-            {
-                var piece = token.Substring(start, length);
-                if (!KnownTranscriptWords.Contains(piece))
-                {
-                    continue;
-                }
-
-                var candidate = new List<int>(current) { length };
-                var next = start + length;
-                if (best[next] is null || IsBetterSegmentation(candidate, best[next]!))
-                {
-                    best[next] = candidate;
-                }
-            }
-        }
-
-        var result = best[token.Length];
-        if (result is null || result.Count < 2)
-        {
-            return false;
-        }
-
-        var hasMeaningfulSplit = result.Any(length => length > 1);
-        if (!hasMeaningfulSplit)
-        {
-            return false;
-        }
-
-        segmentLengths = result;
-        return true;
-    }
-
-    private static bool IsBetterSegmentation(List<int> candidate, List<int> existing)
-    {
-        if (candidate.Count != existing.Count)
-        {
-            return candidate.Count > existing.Count;
-        }
-
-        var candidateShortest = candidate.Min();
-        var existingShortest = existing.Min();
-        if (candidateShortest != existingShortest)
-        {
-            return candidateShortest > existingShortest;
-        }
-
-        return candidate.Sum() > existing.Sum();
+        normalized = DuplicateWhitespaceRegex.Replace(normalized, " ");
+        return normalized.Trim();
     }
 
     private void CloseTranscriptTurns()
