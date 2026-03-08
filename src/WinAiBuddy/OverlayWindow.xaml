@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:WinAiBuddy.Controls"
         Width="900"
-        Height="170"
+        MinHeight="120"
+        SizeToContent="Height"
         ShowInTaskbar="False"
         ShowActivated="False"
         Topmost="True"
@@ -35,13 +36,17 @@
                 CornerRadius="18"
                 Background="#D9111111"
                 MouseLeftButtonDown="OverlayBorder_OnMouseLeftButtonDown">
-            <controls:OutlinedTextBlock x:Name="MessageTextBlock"
-                                        Foreground="White"
-                                        FontSize="26"
-                                        FontWeight="SemiBold"
-                                        Stroke="#FF06131A"
-                                        StrokeThickness="2.5"
-                                        Text="Waiting for advice..." />
+            <ScrollViewer x:Name="MessageScrollViewer"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <controls:OutlinedTextBlock x:Name="MessageTextBlock"
+                                            Foreground="White"
+                                            FontSize="26"
+                                            FontWeight="SemiBold"
+                                            Stroke="#FF06131A"
+                                            StrokeThickness="2.5"
+                                            Text="Waiting for advice..." />
+            </ScrollViewer>
         </Border>
     </Grid>
 </Window>

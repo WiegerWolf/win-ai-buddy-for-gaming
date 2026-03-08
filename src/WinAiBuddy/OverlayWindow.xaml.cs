@@ -41,6 +41,8 @@ public partial class OverlayWindow : Window
     public void SetMessage(string message)
     {
         MessageTextBlock.Text = message;
+        UpdateOverlaySizing();
+        MessageScrollViewer.ScrollToEnd();
         if (!_hasCustomPosition)
         {
             PositionBottomCenter();
@@ -62,6 +64,7 @@ public partial class OverlayWindow : Window
         MessageTextBlock.FontSize = settings.OverlayFontSize;
         MessageTextBlock.Stroke = ParseBrush(settings.OverlayOutlineColor, WpfBrushes.Black);
         MessageTextBlock.StrokeThickness = Math.Clamp(settings.OverlayOutlineThickness, 0, 8);
+        UpdateOverlaySizing();
 
         if (settings.OverlayLeft.HasValue && settings.OverlayTop.HasValue)
         {
@@ -155,8 +158,11 @@ public partial class OverlayWindow : Window
             return;
         }
 
-        Left = area.Value.Left + Math.Max(0, (area.Value.Width - Width) / 2);
-        Top = area.Value.Bottom - Height - 56;
+        var overlayWidth = ActualWidth > 0 ? ActualWidth : Width;
+        var overlayHeight = ActualHeight > 0 ? ActualHeight : Height;
+
+        Left = area.Value.Left + Math.Max(0, (area.Value.Width - overlayWidth) / 2);
+        Top = area.Value.Bottom - overlayHeight - 56;
     }
 
     private void OverlayBorder_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -230,8 +236,21 @@ public partial class OverlayWindow : Window
 
     private void OverlayWindow_OnSourceInitialized(object? sender, EventArgs e)
     {
+        UpdateOverlaySizing();
         UpdateWindowInteractionStyle();
         EnsureTopmost();
+    }
+
+    private void UpdateOverlaySizing()
+    {
+        var area = Screen.PrimaryScreen?.WorkingArea;
+        if (area is not null)
+        {
+            MaxHeight = Math.Max(160, area.Value.Height * 0.45);
+            MessageScrollViewer.MaxHeight = Math.Max(100, area.Value.Height * 0.35);
+        }
+
+        UpdateLayout();
     }
 
     private void UpdateWindowInteractionStyle()
