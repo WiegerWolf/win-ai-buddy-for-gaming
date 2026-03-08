@@ -34,7 +34,7 @@
                 <TextBlock DockPanel.Dock="Bottom"
                            Margin="20,0,20,16"
                            Foreground="{StaticResource TextMuted}"
-                           Text="v1.0" />
+                           Text="v1.1" />
 
                 <StackPanel>
                     <RadioButton x:Name="NavSession"
