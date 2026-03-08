@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -22,8 +23,11 @@ public partial class MainWindow : Window
     private readonly VoiceSamplePlayer _voiceSamplePlayer;
     private readonly MicrophoneLevelMonitor _microphoneLevelMonitor;
     private readonly DispatcherTimer _screenPreviewTimer;
+    private readonly ObservableCollection<ConversationLogEntry> _conversationLogEntries = new();
     private bool _allowClose;
     private int _screenPreviewVersion;
+    private ConversationLogEntry? _latestUserLogEntry;
+    private ConversationLogEntry? _latestModelLogEntry;
 
     public MainWindow(
         SettingsService settingsService,
@@ -43,11 +47,13 @@ public partial class MainWindow : Window
         InitializeComponent();
         System.Windows.DataObject.AddPastingHandler(ScreenIntervalTextBox, ScreenIntervalTextBox_OnPasting);
         VoiceComboBox.ItemsSource = GeminiVoiceCatalog.All;
+        LogsListBox.ItemsSource = _conversationLogEntries;
         ReloadCaptureSources();
         LoadSettings(_settingsService.Current);
         HookPreviewServices();
         RestartMicPreview();
         StartScreenPreviewTimer();
+        UpdateLogsPlaceholderVisibility();
 
         _orchestrator.StatusChanged += message => Dispatcher.Invoke(() => SetStatus(message));
         _orchestrator.SessionStateChanged += isRunning => Dispatcher.Invoke(() =>
@@ -57,10 +63,12 @@ public partial class MainWindow : Window
         _orchestrator.InputTranscriptionChanged += text => Dispatcher.Invoke(() =>
         {
             InputTranscriptTextBlock.Text = string.IsNullOrWhiteSpace(text) ? "Nothing heard yet." : text;
+            LogConversationUpdate("You", text, isModel: false);
         });
         _orchestrator.OutputTranscriptionChanged += text => Dispatcher.Invoke(() =>
         {
             OutputTranscriptTextBlock.Text = string.IsNullOrWhiteSpace(text) ? "No model response yet." : text;
+            LogConversationUpdate("Gemini", text, isModel: true);
         });
     }
 
@@ -270,6 +278,32 @@ public partial class MainWindow : Window
         SetStatus("Audio and screen sources refreshed.");
     }
 
+    private void CopyLogsButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_conversationLogEntries.Count == 0)
+        {
+            SetStatus("There are no logs to copy yet.");
+            return;
+        }
+
+        var text = string.Join(
+            Environment.NewLine + Environment.NewLine,
+            _conversationLogEntries.Select(entry =>
+                $"[{entry.DisplayTimestamp}] {entry.Role}{Environment.NewLine}{entry.Text}"));
+
+        System.Windows.Clipboard.SetText(text);
+        SetStatus("Copied conversation logs to the clipboard.");
+    }
+
+    private void ClearLogsButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        _conversationLogEntries.Clear();
+        _latestUserLogEntry = null;
+        _latestModelLogEntry = null;
+        UpdateLogsPlaceholderVisibility();
+        SetStatus("Cleared conversation logs.");
+    }
+
     private void MicrophoneGainSlider_OnValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (!IsInitialized)
@@ -376,6 +410,65 @@ public partial class MainWindow : Window
             _overlayService.ApplySettings(settings);
         }
         catch { }
+    }
+
+    private void LogConversationUpdate(string role, string? text, bool isModel)
+    {
+        var cleaned = text?.Trim();
+        if (string.IsNullOrWhiteSpace(cleaned))
+        {
+            return;
+        }
+
+        var latestEntry = isModel ? _latestModelLogEntry : _latestUserLogEntry;
+
+        if (latestEntry is not null)
+        {
+            if (string.Equals(latestEntry.Text, cleaned, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (ReferenceEquals(_conversationLogEntries.LastOrDefault(), latestEntry) &&
+                cleaned.StartsWith(latestEntry.Text, StringComparison.Ordinal))
+            {
+                latestEntry.Text = cleaned;
+                latestEntry.Timestamp = DateTime.Now;
+                ScrollLogsToEnd();
+                return;
+            }
+        }
+
+        var entry = new ConversationLogEntry(DateTime.Now, role, cleaned);
+        _conversationLogEntries.Add(entry);
+
+        if (_conversationLogEntries.Count > 500)
+        {
+            var removed = _conversationLogEntries[0];
+            _conversationLogEntries.RemoveAt(0);
+
+            if (ReferenceEquals(removed, _latestUserLogEntry))
+            {
+                _latestUserLogEntry = null;
+            }
+
+            if (ReferenceEquals(removed, _latestModelLogEntry))
+            {
+                _latestModelLogEntry = null;
+            }
+        }
+
+        if (isModel)
+        {
+            _latestModelLogEntry = entry;
+        }
+        else
+        {
+            _latestUserLogEntry = entry;
+        }
+
+        UpdateLogsPlaceholderVisibility();
+        ScrollLogsToEnd();
     }
 
     private void PickTextColorButton_OnClick(object sender, RoutedEventArgs e)
@@ -740,6 +833,25 @@ public partial class MainWindow : Window
     private void UpdateMicrophoneGainLabel(double gain)
     {
         MicrophoneGainValueTextBlock.Text = $"{Math.Round(gain * 100):0}%";
+    }
+
+    private void UpdateLogsPlaceholderVisibility()
+    {
+        LogsPlaceholderTextBlock.Visibility = _conversationLogEntries.Count == 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void ScrollLogsToEnd()
+    {
+        if (_conversationLogEntries.Count == 0)
+        {
+            return;
+        }
+
+        var latest = _conversationLogEntries[^1];
+        LogsListBox.ScrollIntoView(latest);
+        UpdateLogsPlaceholderVisibility();
     }
 
     private int ReadScreenIntervalMs(int fallback)
