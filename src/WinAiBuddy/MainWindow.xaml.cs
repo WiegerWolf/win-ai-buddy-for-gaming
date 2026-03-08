@@ -89,6 +89,8 @@ public partial class MainWindow : Window
         SelectVoice(settings.Voice);
         SelectMicrophone(settings.MicrophoneDeviceName);
         SelectScreenSource(settings.ScreenDeviceName);
+        MicrophoneGainSlider.Value = settings.MicrophoneGain;
+        UpdateMicrophoneGainLabel(settings.MicrophoneGain);
         ScreenIntervalTextBox.Text = settings.ScreenCaptureIntervalMs.ToString();
         OverlaySecondsTextBox.Text = settings.OverlayDurationSeconds.ToString();
         OverlayOpacitySlider.Value = settings.OverlayOpacity;
@@ -116,6 +118,7 @@ public partial class MainWindow : Window
             LiveModel = string.IsNullOrWhiteSpace(LiveModelTextBox.Text) ? current.LiveModel : LiveModelTextBox.Text.Trim(),
             Voice = ReadSelectedVoice(current.Voice),
             MicrophoneDeviceName = ReadSelectedMicrophone(current.MicrophoneDeviceName),
+            MicrophoneGain = Math.Clamp(MicrophoneGainSlider.Value, 0.0, 3.0),
             ScreenDeviceName = ReadSelectedScreenSource(current.ScreenDeviceName),
             ScreenCaptureIntervalMs = ParseOrDefault(ScreenIntervalTextBox.Text, current.ScreenCaptureIntervalMs, 100, 5000),
             OverlayDurationSeconds = ParseOrDefault(OverlaySecondsTextBox.Text, current.OverlayDurationSeconds, 1, 60),
@@ -261,6 +264,19 @@ public partial class MainWindow : Window
         RestartMicPreview();
         _ = RefreshScreenPreviewAsync();
         SetStatus("Audio and screen sources refreshed.");
+    }
+
+    private void MicrophoneGainSlider_OnValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsInitialized)
+        {
+            return;
+        }
+
+        var gain = Math.Clamp(e.NewValue, 0.0, 3.0);
+        UpdateMicrophoneGainLabel(gain);
+        _microphoneLevelMonitor.InputGain = gain;
+        _orchestrator.UpdateMicrophoneGain(gain);
     }
 
     private void MicrophoneComboBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -492,7 +508,8 @@ public partial class MainWindow : Window
     private void RestartMicPreview()
     {
         var preferredMic = ReadSelectedMicrophone(_settingsService.Current.MicrophoneDeviceName);
-        _microphoneLevelMonitor.Start(preferredMic);
+        var gain = Math.Clamp(MicrophoneGainSlider.Value, 0.0, 3.0);
+        _microphoneLevelMonitor.Start(preferredMic, gain);
     }
 
     private void StartScreenPreviewTimer()
@@ -659,6 +676,11 @@ public partial class MainWindow : Window
     private void UpdateOverlayOpacityLabel(double value)
     {
         OverlayOpacityValueTextBlock.Text = value.ToString("0.00", CultureInfo.InvariantCulture);
+    }
+
+    private void UpdateMicrophoneGainLabel(double gain)
+    {
+        MicrophoneGainValueTextBlock.Text = $"{Math.Round(gain * 100):0}%";
     }
 
     protected override void OnClosed(EventArgs e)

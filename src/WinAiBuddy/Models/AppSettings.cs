@@ -10,6 +10,8 @@ public sealed class AppSettings
 
     public string MicrophoneDeviceName { get; set; } = string.Empty;
 
+    public double MicrophoneGain { get; set; } = 1.0;
+
     public string ScreenDeviceName { get; set; } = string.Empty;
 
     public int ScreenCaptureIntervalMs { get; set; } = 1000;

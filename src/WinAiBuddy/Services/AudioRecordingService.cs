@@ -7,8 +7,15 @@ namespace WinAiBuddy.Services;
 public sealed class AudioRecordingService : IDisposable
 {
     private WaveInEvent? _recorder;
+    private double _inputGain = 1.0;
 
     public event Action<AudioChunk>? AudioChunkAvailable;
+
+    public double InputGain
+    {
+        get => _inputGain;
+        set => _inputGain = Math.Clamp(value, 0.0, 3.0);
+    }
 
     public static IReadOnlyList<AudioInputDeviceOption> GetInputDevices()
     {
@@ -26,9 +33,10 @@ public sealed class AudioRecordingService : IDisposable
         return devices;
     }
 
-    public void StartStreaming(string? preferredDeviceName = null)
+    public void StartStreaming(string? preferredDeviceName = null, double inputGain = 1.0)
     {
         StopStreaming();
+        InputGain = inputGain;
 
         var devices = GetInputDevices();
         if (devices.Count == 0)
@@ -51,6 +59,7 @@ public sealed class AudioRecordingService : IDisposable
         {
             var bytes = new byte[args.BytesRecorded];
             Buffer.BlockCopy(args.Buffer, 0, bytes, 0, args.BytesRecorded);
+            ApplyGain(bytes, InputGain);
             AudioChunkAvailable?.Invoke(new AudioChunk(bytes, "audio/pcm;rate=16000"));
         };
 
@@ -79,5 +88,24 @@ public sealed class AudioRecordingService : IDisposable
     public void Dispose()
     {
         StopStreaming();
+    }
+
+    private static void ApplyGain(byte[] pcmBytes, double gain)
+    {
+        if (pcmBytes.Length < 2 || Math.Abs(gain - 1.0) < 0.001)
+        {
+            return;
+        }
+
+        for (var index = 0; index + 1 < pcmBytes.Length; index += 2)
+        {
+            var sample = BitConverter.ToInt16(pcmBytes, index);
+            var scaled = (int)Math.Round(sample * gain);
+            scaled = Math.Clamp(scaled, short.MinValue, short.MaxValue);
+
+            var adjusted = BitConverter.GetBytes((short)scaled);
+            pcmBytes[index] = adjusted[0];
+            pcmBytes[index + 1] = adjusted[1];
+        }
     }
 }

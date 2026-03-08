@@ -139,9 +139,30 @@
                                        Text="Select a microphone to preview its live level." />
                         </StackPanel>
 
-                        <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Screen source" />
+                        <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Mic volume" />
+                        <Grid Grid.Row="4" Grid.Column="1" Margin="0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="80" />
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="MicrophoneGainSlider"
+                                    Grid.Column="0"
+                                    Minimum="0.0"
+                                    Maximum="3.0"
+                                    TickFrequency="0.1"
+                                    IsSnapToTickEnabled="False"
+                                    ValueChanged="MicrophoneGainSlider_OnValueChanged" />
+                            <TextBlock x:Name="MicrophoneGainValueTextBlock"
+                                       Grid.Column="1"
+                                       Margin="12,0,0,0"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Right"
+                                       Text="100%" />
+                        </Grid>
+
+                        <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Screen source" />
                         <ComboBox x:Name="ScreenSourceComboBox"
-                                  Grid.Row="4"
+                                  Grid.Row="5"
                                   Grid.Column="1"
                                   Margin="0,8"
                                   Height="32"
@@ -149,8 +170,8 @@
                                   DisplayMemberPath="DisplayName"
                                   SelectedValuePath="DeviceName" />
 
-                        <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="Screen preview" />
-                        <StackPanel Grid.Row="5" Grid.Column="1" Margin="0,8,0,0">
+                        <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="Screen preview" />
+                        <StackPanel Grid.Row="6" Grid.Column="1" Margin="0,8,0,0">
                             <Border Width="420"
                                     Height="236"
                                     Background="#111"
@@ -174,12 +195,12 @@
                                        Text="Live preview of the selected screen." />
                         </StackPanel>
 
-                        <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Screen frame ms" />
-                        <TextBox x:Name="ScreenIntervalTextBox" Grid.Row="6" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
+                        <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Screen frame ms" />
+                        <TextBox x:Name="ScreenIntervalTextBox" Grid.Row="7" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
 
-                        <CheckBox x:Name="StreamScreenFramesCheckBox" Grid.Row="7" Grid.Column="1" Margin="0,16,0,0" Content="Stream screen frames continuously" />
+                        <CheckBox x:Name="StreamScreenFramesCheckBox" Grid.Row="8" Grid.Column="1" Margin="0,16,0,0" Content="Stream screen frames continuously" />
 
-                        <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal" Margin="0,32,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
+                        <StackPanel Grid.Row="9" Grid.Column="1" Orientation="Horizontal" Margin="0,32,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
                             <Button Width="140" Height="36" Margin="0,0,12,0" Click="RefreshSourcesButton_OnClick" Content="Refresh Sources" />
                             <Button Width="120" Height="36" Click="SaveButton_OnClick" Content="Save" />
                         </StackPanel>

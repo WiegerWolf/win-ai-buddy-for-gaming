@@ -6,14 +6,22 @@ namespace WinAiBuddy.Services;
 public sealed class MicrophoneLevelMonitor : IDisposable
 {
     private WaveInEvent? _monitor;
+    private double _inputGain = 1.0;
 
     public event Action<float>? LevelChanged;
 
     public event Action<string>? StatusChanged;
 
-    public void Start(string? preferredDeviceName)
+    public double InputGain
+    {
+        get => _inputGain;
+        set => _inputGain = Math.Clamp(value, 0.0, 3.0);
+    }
+
+    public void Start(string? preferredDeviceName, double inputGain = 1.0)
     {
         Stop();
+        InputGain = inputGain;
 
         var devices = AudioRecordingService.GetInputDevices();
         if (devices.Count == 0)
@@ -95,7 +103,7 @@ public sealed class MicrophoneLevelMonitor : IDisposable
             }
         }
 
-        var normalized = Math.Clamp(peak / (float)short.MaxValue, 0f, 1f);
+        var normalized = Math.Clamp((peak / (float)short.MaxValue) * (float)InputGain, 0f, 1f);
         LevelChanged?.Invoke(normalized);
     }
 

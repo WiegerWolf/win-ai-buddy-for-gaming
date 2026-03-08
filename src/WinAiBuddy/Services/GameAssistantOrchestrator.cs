@@ -69,7 +69,7 @@ public sealed class GameAssistantOrchestrator : IAsyncDisposable
         var settings = _settingsProvider();
         await _liveSessionService.StartAsync(settings, cancellationToken);
 
-        _audioRecordingService.StartStreaming(settings.MicrophoneDeviceName);
+        _audioRecordingService.StartStreaming(settings.MicrophoneDeviceName, settings.MicrophoneGain);
         StartScreenLoop(settings);
 
         StatusChanged?.Invoke("Live session started.");
@@ -141,5 +141,10 @@ public sealed class GameAssistantOrchestrator : IAsyncDisposable
     {
         _audioRecordingService.AudioChunkAvailable -= OnAudioChunkAvailable;
         await StopLiveSessionAsync();
+    }
+
+    public void UpdateMicrophoneGain(double gain)
+    {
+        _audioRecordingService.InputGain = gain;
     }
 }
