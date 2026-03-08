@@ -34,8 +34,6 @@
                 Padding="22"
                 CornerRadius="18"
                 Background="#D9111111"
-                BorderBrush="#33FFFFFF"
-                BorderThickness="1"
                 MouseLeftButtonDown="OverlayBorder_OnMouseLeftButtonDown">
             <controls:OutlinedTextBlock x:Name="MessageTextBlock"
                                         Foreground="White"

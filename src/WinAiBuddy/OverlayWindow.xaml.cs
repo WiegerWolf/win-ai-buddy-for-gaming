@@ -57,7 +57,6 @@ public partial class OverlayWindow : Window
         var bgBrush = new SolidColorBrush(WpfColor.FromArgb(bgOpacityByte, baseBgColor.R, baseBgColor.G, baseBgColor.B));
         bgBrush.Freeze();
         OverlayBorder.Background = bgBrush;
-        OverlayBorder.BorderThickness = bgOpacityByte == 0 ? new Thickness(0) : new Thickness(1);
 
         MessageTextBlock.Foreground = ParseBrush(settings.OverlayTextColor, WpfBrushes.White);
         MessageTextBlock.FontSize = settings.OverlayFontSize;
