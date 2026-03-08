@@ -7,6 +7,7 @@ namespace WinAiBuddy.Services;
 public sealed class GeminiLiveSessionService : IAsyncDisposable
 {
     private const int MaxBufferedRealtimeInputs = 1000;
+    private const string TransparentUnsupportedMessage = "transparent parameter is not supported";
 
     private readonly SemaphoreSlim _sendLock = new(1, 1);
     private readonly SemaphoreSlim _reconnectLock = new(1, 1);
@@ -24,6 +25,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
     private long _nextClientMessageIndex;
     private long _lastConsumedClientMessageIndex = -1;
     private bool _shouldBeRunning;
+    private bool _transparentResumptionEnabled = true;
 
     private readonly List<BufferedRealtimeInput> _pendingRealtimeInputs = new();
 
@@ -138,7 +140,18 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
 
         var config = BuildConnectConfig(settings, allowResumption);
 
-        _session = await _client.Live.ConnectAsync(settings.LiveModel, config, cancellationToken);
+        try
+        {
+            _session = await _client.Live.ConnectAsync(settings.LiveModel, config, cancellationToken);
+        }
+        catch (Exception ex) when (_transparentResumptionEnabled && SupportsTransparentFallback(ex))
+        {
+            _transparentResumptionEnabled = false;
+            StatusChanged?.Invoke("Gemini Live does not support transparent session resumption here. Falling back to handle-based recovery.");
+
+            config = BuildConnectConfig(settings, allowResumption);
+            _session = await _client.Live.ConnectAsync(settings.LiveModel, config, cancellationToken);
+        }
 
         _receiveLoopCts?.Dispose();
         _receiveLoopCts = CancellationTokenSource.CreateLinkedTokenSource(
@@ -164,7 +177,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
             SessionResumption = new SessionResumptionConfig
             {
                 Handle = allowResumption ? _sessionResumptionHandle : null,
-                Transparent = true
+                Transparent = _transparentResumptionEnabled ? true : null
             },
             SystemInstruction = new Content
             {
@@ -334,11 +347,20 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
 
                     await DisposeCurrentSessionAsync(resetTranscripts: false, CancellationToken.None);
                     await ConnectAsync(_activeSettings, allowResumption: true, CancellationToken.None);
-                    await ReplayBufferedRealtimeInputsAsync(CancellationToken.None);
+                    if (_transparentResumptionEnabled)
+                    {
+                        await ReplayBufferedRealtimeInputsAsync(CancellationToken.None);
+                    }
+                    else
+                    {
+                        TrimBufferedInputsAfterOpaqueReconnect();
+                    }
 
                     StatusChanged?.Invoke(string.IsNullOrWhiteSpace(_sessionResumptionHandle)
                         ? "Live session reconnected."
-                        : "Live session reconnected and resumed.");
+                        : _transparentResumptionEnabled
+                            ? "Live session reconnected and resumed."
+                            : "Live session reconnected and resumed context.");
                     return;
                 }
                 catch (Exception ex)
@@ -505,6 +527,17 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
             _sessionResumptionHandle = null;
             _nextClientMessageIndex = 0;
             _lastConsumedClientMessageIndex = -1;
+        }
+
+        _transparentResumptionEnabled = true;
+    }
+
+    private void TrimBufferedInputsAfterOpaqueReconnect()
+    {
+        lock (_bufferLock)
+        {
+            _pendingRealtimeInputs.Clear();
+            _lastConsumedClientMessageIndex = _nextClientMessageIndex;
         }
     }
 
@@ -731,6 +764,11 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
             "high" => ThinkingLevel.High,
             _ => (ThinkingLevel?)null
         };
+    }
+
+    private static bool SupportsTransparentFallback(Exception ex)
+    {
+        return ex.Message.Contains(TransparentUnsupportedMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed record BufferedRealtimeInput(long Index, Blob? Audio, Blob? Video)
