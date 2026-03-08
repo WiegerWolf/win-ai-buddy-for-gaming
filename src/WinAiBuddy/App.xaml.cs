@@ -44,6 +44,7 @@ public partial class App : Application
             _speechPlaybackService);
 
         _mainWindow = new MainWindow(settingsService, _orchestrator, overlayService);
+        _mainWindow.Icon = AppIconProvider.LoadWindowIcon();
         _mainWindow.Show();
 
         if (settingsService.Current.StartMinimizedToTray)
@@ -75,7 +76,7 @@ public partial class App : Application
     {
         _notifyIcon = new NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = AppIconProvider.LoadTrayIcon(),
             Text = "Win AI Buddy",
             Visible = true
         };

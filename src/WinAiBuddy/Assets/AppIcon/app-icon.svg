@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title>Win AI Buddy Icon</title>
+  <desc>HUD-inspired speech bubble icon with bright cyan gaming accents.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#173044" />
+      <stop offset="100%" stop-color="#081018" />
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5AF5D2" />
+      <stop offset="100%" stop-color="#2CC8FF" />
+    </linearGradient>
+  </defs>
+
+  <rect x="16" y="16" width="224" height="224" rx="54" fill="url(#bg)" />
+  <rect x="16" y="16" width="224" height="224" rx="54" fill="none" stroke="#5AF5D2" stroke-width="8" />
+
+  <path d="M58 52h28M52 58v28M198 52h-28M204 58v28M58 204h28M52 198v-28M198 204h-28M204 198v-28"
+        fill="none"
+        stroke="url(#glow)"
+        stroke-linecap="round"
+        stroke-width="10" />
+
+  <path d="M82 94c0-12 10-22 22-22h48c12 0 22 10 22 22v36c0 12-10 22-22 22h-28l-20 24v-24h-20c-12 0-22-10-22-22z"
+        fill="#F7FBFF" />
+
+  <circle cx="112" cy="112" r="8" fill="#2CC8FF" />
+  <rect x="128" y="104" width="28" height="8" rx="4" fill="#2CC8FF" />
+  <rect x="104" y="124" width="52" height="8" rx="4" fill="#57E7B4" />
+
+  <circle cx="182" cy="74" r="10" fill="#57E7B4" fill-opacity="0.85" />
+</svg>
+
