@@ -989,6 +989,30 @@ public partial class MainWindow : Window
         return ParseOrDefault(ScreenIntervalTextBox.Text, fallback, 100, 5000);
     }
 
+    private void NavSession_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!IsInitialized) return;
+        SessionPanel.Visibility = Visibility.Visible;
+        SettingsPanel.Visibility = Visibility.Collapsed;
+        ConversationPanel.Visibility = Visibility.Collapsed;
+    }
+
+    private void NavSettings_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!IsInitialized) return;
+        SessionPanel.Visibility = Visibility.Collapsed;
+        SettingsPanel.Visibility = Visibility.Visible;
+        ConversationPanel.Visibility = Visibility.Collapsed;
+    }
+
+    private void NavConversation_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!IsInitialized) return;
+        SessionPanel.Visibility = Visibility.Collapsed;
+        SettingsPanel.Visibility = Visibility.Collapsed;
+        ConversationPanel.Visibility = Visibility.Visible;
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         _screenPreviewTimer.Stop();
