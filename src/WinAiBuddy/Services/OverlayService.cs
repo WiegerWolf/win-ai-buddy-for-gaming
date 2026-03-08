@@ -1,19 +1,26 @@
+using WinAiBuddy.Models;
+
 namespace WinAiBuddy.Services;
 
 public sealed class OverlayService
 {
     private readonly OverlayWindow _window;
+    private readonly SettingsService _settingsService;
     private CancellationTokenSource? _hideCts;
 
-    public OverlayService(OverlayWindow window)
+    public OverlayService(OverlayWindow window, SettingsService settingsService)
     {
         _window = window;
+        _settingsService = settingsService;
+        _window.PositionChanged += OverlayWindow_OnPositionChanged;
+        ApplySettings(_settingsService.Current);
     }
 
     public async Task ShowMessageAsync(string text, TimeSpan duration)
     {
         await _window.Dispatcher.InvokeAsync(() =>
         {
+            _window.ApplySettings(_settingsService.Current);
             _window.SetMessage(text);
             if (!_window.IsVisible)
             {
@@ -21,9 +28,57 @@ public sealed class OverlayService
             }
         });
 
+        if (_window.IsEditing)
+        {
+            return;
+        }
+
         _hideCts?.Cancel();
         _hideCts = new CancellationTokenSource();
         _ = HideLaterAsync(duration, _hideCts.Token);
+    }
+
+    public void ApplySettings(AppSettings settings)
+    {
+        if (_window.Dispatcher.CheckAccess())
+        {
+            _window.ApplySettings(settings);
+            return;
+        }
+
+        _window.Dispatcher.Invoke(() => _window.ApplySettings(settings));
+    }
+
+    public async Task BeginEditingAsync(string sampleText)
+    {
+        _hideCts?.Cancel();
+
+        await _window.Dispatcher.InvokeAsync(() =>
+        {
+            _window.ApplySettings(_settingsService.Current);
+            _window.SetMessage(sampleText);
+            _window.SetEditMode(true);
+
+            if (!_window.IsVisible)
+            {
+                _window.Show();
+            }
+        });
+    }
+
+    public async Task EndEditingAsync(bool hideOverlay = true)
+    {
+        _hideCts?.Cancel();
+
+        await _window.Dispatcher.InvokeAsync(() =>
+        {
+            _window.SetEditMode(false);
+
+            if (hideOverlay)
+            {
+                _window.Hide();
+            }
+        });
     }
 
     public async Task HideAsync()
@@ -31,6 +86,7 @@ public sealed class OverlayService
         _hideCts?.Cancel();
         await _window.Dispatcher.InvokeAsync(() =>
         {
+            _window.SetEditMode(false);
             _window.Hide();
         });
     }
@@ -45,5 +101,12 @@ public sealed class OverlayService
         catch (OperationCanceledException)
         {
         }
+    }
+
+    private void OverlayWindow_OnPositionChanged(double left, double top)
+    {
+        _settingsService.Current.OverlayLeft = left;
+        _settingsService.Current.OverlayTop = top;
+        _settingsService.Save(_settingsService.Current);
     }
 }

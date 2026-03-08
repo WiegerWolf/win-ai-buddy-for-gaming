@@ -29,7 +29,7 @@ public partial class App : Application
         settingsService.EnsureLoaded();
 
         var overlayWindow = new OverlayWindow();
-        var overlayService = new OverlayService(overlayWindow);
+        var overlayService = new OverlayService(overlayWindow, settingsService);
         var screenCaptureService = new ScreenCaptureService();
         _audioRecordingService = new AudioRecordingService();
         _liveSessionService = new GeminiLiveSessionService();

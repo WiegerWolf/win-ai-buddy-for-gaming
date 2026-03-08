@@ -1,8 +1,12 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using WinAiBuddy.Models;
 using WinAiBuddy.Services;
+using WpfColor = System.Windows.Media.Color;
 
 namespace WinAiBuddy;
 
@@ -70,6 +74,11 @@ public partial class MainWindow : Window
         SelectVoice(settings.Voice);
         ScreenIntervalTextBox.Text = settings.ScreenCaptureIntervalMs.ToString();
         OverlaySecondsTextBox.Text = settings.OverlayDurationSeconds.ToString();
+        OverlayOpacitySlider.Value = settings.OverlayOpacity;
+        OverlayTextColorTextBox.Text = settings.OverlayTextColor;
+        OverlayOutlineColorTextBox.Text = settings.OverlayOutlineColor;
+        OverlayOutlineThicknessTextBox.Text = settings.OverlayOutlineThickness.ToString("0.##", CultureInfo.InvariantCulture);
+        UpdateOverlayOpacityLabel(settings.OverlayOpacity);
         SystemPromptTextBox.Text = settings.SystemPrompt;
         StreamScreenFramesCheckBox.IsChecked = settings.StreamScreenFrames;
         AutoStartSessionCheckBox.IsChecked = settings.AutoStartSession;
@@ -87,6 +96,12 @@ public partial class MainWindow : Window
             Voice = ReadSelectedVoice(current.Voice),
             ScreenCaptureIntervalMs = ParseOrDefault(ScreenIntervalTextBox.Text, current.ScreenCaptureIntervalMs, 100, 5000),
             OverlayDurationSeconds = ParseOrDefault(OverlaySecondsTextBox.Text, current.OverlayDurationSeconds, 1, 60),
+            OverlayOpacity = Math.Clamp(OverlayOpacitySlider.Value, 0.15, 1.0),
+            OverlayTextColor = NormalizeColorOrDefault(OverlayTextColorTextBox.Text, current.OverlayTextColor),
+            OverlayOutlineColor = NormalizeColorOrDefault(OverlayOutlineColorTextBox.Text, current.OverlayOutlineColor),
+            OverlayOutlineThickness = ParseDoubleOrDefault(OverlayOutlineThicknessTextBox.Text, current.OverlayOutlineThickness, 0, 8),
+            OverlayLeft = current.OverlayLeft,
+            OverlayTop = current.OverlayTop,
             ScreenshotJpegQuality = current.ScreenshotJpegQuality,
             AutoStartSession = AutoStartSessionCheckBox.IsChecked == true,
             StreamScreenFrames = StreamScreenFramesCheckBox.IsChecked == true,
@@ -101,6 +116,7 @@ public partial class MainWindow : Window
         {
             var settings = ReadSettingsFromUi();
             _settingsService.Save(settings);
+            _overlayService.ApplySettings(settings);
             SetStatus($"Saved settings. Model: {settings.LiveModel}. Voice: {settings.Voice}");
             await _overlayService.ShowMessageAsync("Settings saved.", TimeSpan.FromSeconds(2));
         }
@@ -116,6 +132,7 @@ public partial class MainWindow : Window
         {
             var settings = ReadSettingsFromUi();
             _settingsService.Save(settings);
+            _overlayService.ApplySettings(settings);
             SetStatus("Starting live session...");
             await _orchestrator.StartLiveSessionAsync();
         }
@@ -160,15 +177,62 @@ public partial class MainWindow : Window
 
     private async void OverlayTestButton_OnClick(object sender, RoutedEventArgs e)
     {
+        var settings = ReadSettingsFromUi();
+        _settingsService.Save(settings);
+        _overlayService.ApplySettings(settings);
         await _overlayService.ShowMessageAsync(
             "Overlay check: the assistant is ready to display advice over your game.",
             TimeSpan.FromSeconds(4));
+    }
+
+    private async void AdjustOverlayButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var settings = ReadSettingsFromUi();
+            _settingsService.Save(settings);
+            _overlayService.ApplySettings(settings);
+            await _overlayService.BeginEditingAsync(
+                "Drag me wherever you want live coaching to appear.");
+            SetStatus("Drag the overlay to position it, then click Lock Overlay.");
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Adjust overlay failed: {ex.Message}");
+        }
+    }
+
+    private async void LockOverlayButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        await _overlayService.EndEditingAsync();
+        SetStatus("Overlay locked. Position saved.");
+    }
+
+    private async void ResetOverlayPositionButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        var settings = ReadSettingsFromUi();
+        settings.OverlayLeft = null;
+        settings.OverlayTop = null;
+        _settingsService.Save(settings);
+        _overlayService.ApplySettings(settings);
+        await _overlayService.ShowMessageAsync("Overlay reset to the default position.", TimeSpan.FromSeconds(2));
+        SetStatus("Overlay position reset to bottom center.");
     }
 
     private void HideToTrayButton_OnClick(object sender, RoutedEventArgs e)
     {
         Hide();
         SetStatus("Window hidden to tray.");
+    }
+
+    private void OverlayOpacitySlider_OnValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsInitialized)
+        {
+            return;
+        }
+
+        UpdateOverlayOpacityLabel(e.NewValue);
     }
 
     private void Window_OnClosing(object? sender, CancelEventArgs e)
@@ -207,6 +271,35 @@ public partial class MainWindow : Window
         return Math.Clamp(parsed, min, max);
     }
 
+    private static double ParseDoubleOrDefault(string? value, double fallback, double min, double max)
+    {
+        if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) &&
+            !double.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out parsed))
+        {
+            return fallback;
+        }
+
+        return Math.Clamp(parsed, min, max);
+    }
+
+    private static string NormalizeColorOrDefault(string? value, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return fallback;
+        }
+
+        try
+        {
+            var converted = System.Windows.Media.ColorConverter.ConvertFromString(value.Trim());
+            return converted is WpfColor color ? color.ToString() : fallback;
+        }
+        catch (FormatException)
+        {
+            return fallback;
+        }
+    }
+
     private void SelectVoice(string voiceName)
     {
         if (string.IsNullOrWhiteSpace(voiceName))
@@ -242,6 +335,11 @@ public partial class MainWindow : Window
         }
 
         return fallback;
+    }
+
+    private void UpdateOverlayOpacityLabel(double value)
+    {
+        OverlayOpacityValueTextBlock.Text = value.ToString("0.00", CultureInfo.InvariantCulture);
     }
 
     protected override void OnClosed(EventArgs e)

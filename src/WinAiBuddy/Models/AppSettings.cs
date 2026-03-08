@@ -12,6 +12,18 @@ public sealed class AppSettings
 
     public int OverlayDurationSeconds { get; set; } = 10;
 
+    public double OverlayOpacity { get; set; } = 0.94;
+
+    public string OverlayTextColor { get; set; } = "#FFFFFFFF";
+
+    public string OverlayOutlineColor { get; set; } = "#FF06131A";
+
+    public double OverlayOutlineThickness { get; set; } = 2.5;
+
+    public double? OverlayLeft { get; set; }
+
+    public double? OverlayTop { get; set; }
+
     public int ScreenshotJpegQuality { get; set; } = 85;
 
     public bool StartMinimizedToTray { get; set; }

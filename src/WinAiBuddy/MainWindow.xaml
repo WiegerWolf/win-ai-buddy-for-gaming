@@ -3,9 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Win AI Buddy"
         Width="920"
-        Height="760"
+        Height="900"
         MinWidth="720"
-        MinHeight="620"
+        MinHeight="720"
         WindowStartupLocation="CenterScreen"
         Closing="Window_OnClosing"
         StateChanged="Window_OnStateChanged">
@@ -73,8 +73,59 @@
             <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Center" Text="Overlay seconds" />
             <TextBox x:Name="OverlaySecondsTextBox" Grid.Row="5" Grid.Column="1" Margin="0,8" Height="32" VerticalContentAlignment="Center" />
 
-            <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="System prompt" />
+            <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="Overlay style" />
             <StackPanel Grid.Row="6" Grid.Column="1" Margin="0,8,0,0">
+                <TextBlock Foreground="#555" Text="Use hex colors like #FFFFFF or #FF00FF00. Adjust Overlay opens a draggable preview." />
+
+                <TextBlock Margin="0,16,0,0" Text="Overlay opacity" />
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="80" />
+                    </Grid.ColumnDefinitions>
+
+                    <Slider x:Name="OverlayOpacitySlider"
+                            Grid.Column="0"
+                            Minimum="0.15"
+                            Maximum="1.0"
+                            TickFrequency="0.05"
+                            IsSnapToTickEnabled="False"
+                            ValueChanged="OverlayOpacitySlider_OnValueChanged" />
+                    <TextBlock x:Name="OverlayOpacityValueTextBlock"
+                               Grid.Column="1"
+                               Margin="12,0,0,0"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Right"
+                               Text="0.94" />
+                </Grid>
+
+                <TextBlock Margin="0,16,0,0" Text="Text color" />
+                <TextBox x:Name="OverlayTextColorTextBox"
+                         Margin="0,8,0,0"
+                         Height="32"
+                         VerticalContentAlignment="Center" />
+
+                <TextBlock Margin="0,16,0,0" Text="Outline color" />
+                <TextBox x:Name="OverlayOutlineColorTextBox"
+                         Margin="0,8,0,0"
+                         Height="32"
+                         VerticalContentAlignment="Center" />
+
+                <TextBlock Margin="0,16,0,0" Text="Outline thickness" />
+                <TextBox x:Name="OverlayOutlineThicknessTextBox"
+                         Margin="0,8,0,0"
+                         Height="32"
+                         VerticalContentAlignment="Center" />
+
+                <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                    <Button Width="140" Height="36" Margin="0,0,12,0" Click="AdjustOverlayButton_OnClick" Content="Adjust Overlay" />
+                    <Button Width="120" Height="36" Margin="0,0,12,0" Click="LockOverlayButton_OnClick" Content="Lock Overlay" />
+                    <Button Width="140" Height="36" Click="ResetOverlayPositionButton_OnClick" Content="Reset Position" />
+                </StackPanel>
+            </StackPanel>
+
+            <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="System prompt" />
+            <StackPanel Grid.Row="7" Grid.Column="1" Margin="0,8,0,0">
                 <TextBox x:Name="SystemPromptTextBox"
                          MinHeight="140"
                          AcceptsReturn="True"
