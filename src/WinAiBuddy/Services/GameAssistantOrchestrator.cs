@@ -12,6 +12,7 @@ public sealed class GameAssistantOrchestrator : IAsyncDisposable
     private readonly SpeechPlaybackService _speechPlaybackService;
     private CancellationTokenSource? _screenLoopCts;
     private bool _isRunning;
+    private string _lastStatusMessage = string.Empty;
 
     public GameAssistantOrchestrator(
         Func<AppSettings> settingsProvider,
@@ -29,11 +30,30 @@ public sealed class GameAssistantOrchestrator : IAsyncDisposable
         _speechPlaybackService = speechPlaybackService;
 
         _audioRecordingService.AudioChunkAvailable += OnAudioChunkAvailable;
-        _liveSessionService.StatusChanged += message => StatusChanged?.Invoke(message);
+        _liveSessionService.StatusChanged += message =>
+        {
+            _lastStatusMessage = message;
+            StatusChanged?.Invoke(message);
+        };
         _liveSessionService.SessionStateChanged += isRunning =>
         {
+            var wasRunning = _isRunning;
             _isRunning = isRunning;
             SessionStateChanged?.Invoke(isRunning);
+
+            if (isRunning && !wasRunning)
+            {
+                var resumed = _lastStatusMessage.Contains("resumed", StringComparison.OrdinalIgnoreCase) ||
+                              _lastStatusMessage.Contains("reconnected", StringComparison.OrdinalIgnoreCase);
+                var message = resumed
+                    ? "Live coaching resumed."
+                    : "Live coaching started.";
+                _ = _overlayService.ShowMessageAsync(message, TimeSpan.FromSeconds(3));
+            }
+            else if (!isRunning && wasRunning)
+            {
+                _ = _overlayService.ShowMessageAsync("Live coaching stopped.", TimeSpan.FromSeconds(3));
+            }
         };
         _liveSessionService.InputTranscriptionChanged += text => InputTranscriptionChanged?.Invoke(text);
         _liveSessionService.OutputTranscriptionChanged += text =>
