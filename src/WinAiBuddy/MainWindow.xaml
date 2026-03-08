@@ -790,51 +790,132 @@
                         </StackPanel>
                     </DockPanel>
 
-                    <Border Grid.Row="1"
-                            Style="{StaticResource CardStyle}"
-                            Padding="8">
-                        <Grid>
-                            <ListBox x:Name="LogsListBox"
-                                     Background="Transparent"
-                                     BorderThickness="0"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Margin="4"
-                                                Padding="16"
-                                                Background="{StaticResource CardBackground}"
-                                                CornerRadius="10"
-                                                BorderBrush="{StaticResource CardBorder}"
-                                                BorderThickness="1">
-                                            <StackPanel>
-                                                <DockPanel>
-                                                    <TextBlock FontWeight="SemiBold"
-                                                               Foreground="{StaticResource AccentPrimary}"
-                                                               Text="{Binding Role}" />
-                                                    <TextBlock Margin="10,0,0,0"
-                                                               FontSize="12"
-                                                               Foreground="{StaticResource TextMuted}"
-                                                               Text="{Binding DisplayTimestamp}" />
-                                                </DockPanel>
-                                                <TextBlock Margin="0,8,0,0"
-                                                           TextWrapping="Wrap"
-                                                           Foreground="{StaticResource TextPrimary}"
-                                                           Text="{Binding Text}" />
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="280" />
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
 
-                            <TextBlock x:Name="LogsPlaceholderTextBlock"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       Foreground="{StaticResource TextMuted}"
-                                       Text="Conversation logs will appear here once you start talking with the model." />
+                        <Border Grid.Column="0"
+                                Style="{StaticResource CardStyle}"
+                                Padding="12">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Text="Saved Sessions"
+                                           Style="{StaticResource CardHeader}" />
+                                <TextBlock Grid.Row="1"
+                                           Margin="0,8,0,12"
+                                           Style="{StaticResource FieldDescription}"
+                                           Text="Each live run is saved automatically. If the app crashes, the unfinished session will show up here as Interrupted." />
+
+                                <Grid Grid.Row="2">
+                                    <ListBox x:Name="ConversationSessionsListBox"
+                                             Background="Transparent"
+                                             BorderThickness="0"
+                                             SelectionChanged="ConversationSessionsListBox_OnSelectionChanged">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="0,0,0,8"
+                                                        Padding="12"
+                                                        Background="{StaticResource CardBackground}"
+                                                        CornerRadius="10"
+                                                        BorderBrush="{StaticResource CardBorder}"
+                                                        BorderThickness="1">
+                                                    <StackPanel>
+                                                        <TextBlock FontWeight="SemiBold"
+                                                                   Foreground="{StaticResource TextPrimary}"
+                                                                   Text="{Binding DisplayTitle}" />
+                                                        <TextBlock Margin="0,4,0,0"
+                                                                   Foreground="{StaticResource AccentPrimary}"
+                                                                   Text="{Binding DisplaySubtitle}" />
+                                                        <TextBlock Margin="0,4,0,0"
+                                                                   TextWrapping="Wrap"
+                                                                   Foreground="{StaticResource TextMuted}"
+                                                                   Text="{Binding DisplayDetail}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+
+                                    <TextBlock x:Name="ConversationSessionsPlaceholderTextBlock"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="{StaticResource TextMuted}"
+                                               Text="Saved sessions will appear here." />
+                                </Grid>
+                            </Grid>
+                        </Border>
+
+                        <Border Grid.Column="2"
+                                Style="{StaticResource CardStyle}"
+                                Padding="8">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Margin="8,4,8,12">
+                                    <TextBlock x:Name="ConversationSessionHeaderTextBlock"
+                                               Style="{StaticResource CardHeader}"
+                                               Text="No saved sessions yet" />
+                                    <TextBlock x:Name="ConversationSessionMetaTextBlock"
+                                               Margin="0,6,0,0"
+                                               Style="{StaticResource FieldDescription}"
+                                               Text="Start a live session and the transcript will be saved here automatically." />
+                                </StackPanel>
+
+                                <Grid Grid.Row="1">
+                                    <ListBox x:Name="LogsListBox"
+                                             Background="Transparent"
+                                             BorderThickness="0"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="4"
+                                                        Padding="16"
+                                                        Background="{StaticResource CardBackground}"
+                                                        CornerRadius="10"
+                                                        BorderBrush="{StaticResource CardBorder}"
+                                                        BorderThickness="1">
+                                                    <StackPanel>
+                                                        <DockPanel>
+                                                            <TextBlock FontWeight="SemiBold"
+                                                                       Foreground="{StaticResource AccentPrimary}"
+                                                                       Text="{Binding Role}" />
+                                                            <TextBlock Margin="10,0,0,0"
+                                                                       FontSize="12"
+                                                                       Foreground="{StaticResource TextMuted}"
+                                                                       Text="{Binding DisplayTimestamp}" />
+                                                        </DockPanel>
+                                                        <TextBlock Margin="0,8,0,0"
+                                                                   TextWrapping="Wrap"
+                                                                   Foreground="{StaticResource TextPrimary}"
+                                                                   Text="{Binding Text}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+
+                                    <TextBlock x:Name="LogsPlaceholderTextBlock"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="{StaticResource TextMuted}"
+                                               Text="Conversation logs will appear here once you start talking with the model." />
+                                </Grid>
+                            </Grid>
+                        </Border>
                         </Grid>
-                    </Border>
+                    </Grid>
                 </Grid>
             </Grid>
         </Grid>
-    </Grid>
 </Window>

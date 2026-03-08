@@ -26,10 +26,16 @@ public partial class App : Application
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "WinAiBuddy",
             "appsettings.json");
+        var conversationSessionsPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "WinAiBuddy",
+            "Conversations");
 
         var settingsService = new SettingsService(settingsPath);
         settingsService.EnsureLoaded();
         ApplyTheme(settingsService.Current.AppTheme);
+        var conversationSessionStore = new ConversationSessionStore(conversationSessionsPath);
+        conversationSessionStore.RecoverInterruptedSessions();
 
         var overlayWindow = new OverlayWindow();
         var overlayService = new OverlayService(overlayWindow, settingsService);
@@ -46,7 +52,7 @@ public partial class App : Application
             overlayService,
             _speechPlaybackService);
 
-        _mainWindow = new MainWindow(settingsService, _orchestrator, overlayService);
+        _mainWindow = new MainWindow(settingsService, conversationSessionStore, _orchestrator, overlayService);
         _mainWindow.Icon = AppIconProvider.LoadWindowIcon();
         _mainWindow.Show();
 

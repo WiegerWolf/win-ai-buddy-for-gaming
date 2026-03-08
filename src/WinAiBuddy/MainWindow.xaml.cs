@@ -18,23 +18,31 @@ namespace WinAiBuddy;
 public partial class MainWindow : Window
 {
     private readonly SettingsService _settingsService;
+    private readonly ConversationSessionStore _conversationSessionStore;
     private readonly GameAssistantOrchestrator _orchestrator;
     private readonly OverlayService _overlayService;
     private readonly VoiceSamplePlayer _voiceSamplePlayer;
     private readonly MicrophoneLevelMonitor _microphoneLevelMonitor;
     private readonly DispatcherTimer _screenPreviewTimer;
     private readonly ObservableCollection<ConversationLogEntry> _conversationLogEntries = new();
+    private readonly ObservableCollection<ConversationSessionSummary> _conversationSessions = new();
     private bool _allowClose;
+    private bool _isSessionRunning;
+    private bool _isChangingSessionSelection;
     private int _screenPreviewVersion;
+    private string? _activeConversationSessionId;
+    private string? _selectedConversationSessionId;
     private ConversationLogEntry? _latestUserLogEntry;
     private ConversationLogEntry? _latestModelLogEntry;
 
     public MainWindow(
         SettingsService settingsService,
+        ConversationSessionStore conversationSessionStore,
         GameAssistantOrchestrator orchestrator,
         OverlayService overlayService)
     {
         _settingsService = settingsService;
+        _conversationSessionStore = conversationSessionStore;
         _orchestrator = orchestrator;
         _overlayService = overlayService;
         _voiceSamplePlayer = new VoiceSamplePlayer(Path.Combine(AppContext.BaseDirectory, "Assets", "VoiceSamples"));
@@ -48,23 +56,36 @@ public partial class MainWindow : Window
         System.Windows.DataObject.AddPastingHandler(ScreenIntervalTextBox, ScreenIntervalTextBox_OnPasting);
         VoiceComboBox.ItemsSource = GeminiVoiceCatalog.All;
         InitializeModelOptionLists();
+        ConversationSessionsListBox.ItemsSource = _conversationSessions;
         LogsListBox.ItemsSource = _conversationLogEntries;
         ReloadCaptureSources();
         LoadSettings(_settingsService.Current);
         HookPreviewServices();
         RestartMicPreview();
         StartScreenPreviewTimer();
+        LoadConversationSessions();
         UpdateLogsPlaceholderVisibility();
         UpdateSessionButtons(isRunning: false);
 
         _orchestrator.StatusChanged += message => Dispatcher.Invoke(() => SetStatus(message));
         _orchestrator.SessionStateChanged += isRunning => Dispatcher.Invoke(() =>
         {
+            var wasRunning = _isSessionRunning;
+            _isSessionRunning = isRunning;
             SessionStateTextBlock.Text = isRunning ? "Running" : "Stopped";
             SessionStatusPill.Background = isRunning
                 ? new SolidColorBrush((WpfColor)System.Windows.Media.ColorConverter.ConvertFromString("#3300D4AA"))
                 : new SolidColorBrush((WpfColor)System.Windows.Media.ColorConverter.ConvertFromString("#22C62828"));
             UpdateSessionButtons(isRunning);
+
+            if (isRunning && !wasRunning)
+            {
+                EnsureConversationSessionStarted();
+            }
+            else if (!isRunning && wasRunning)
+            {
+                FinalizeActiveConversationSession();
+            }
         });
         _orchestrator.InputTranscriptionChanged += text => Dispatcher.Invoke(() =>
         {
@@ -97,6 +118,154 @@ public partial class MainWindow : Window
         WindowState = WindowState.Normal;
         Activate();
         ResumeCapturePreviews();
+    }
+
+    private void LoadConversationSessions()
+    {
+        RefreshConversationSessionSummaries();
+
+        if (_conversationSessions.Count == 0)
+        {
+            _selectedConversationSessionId = null;
+            _activeConversationSessionId = null;
+            ConversationSessionHeaderTextBlock.Text = "No saved sessions yet";
+            ConversationSessionMetaTextBlock.Text = "Start a live session and the transcript will be saved here automatically.";
+            ClearConversationView();
+            return;
+        }
+
+        var preferredSessionId = _activeConversationSessionId ?? _selectedConversationSessionId ?? _conversationSessions[0].Id;
+        SelectConversationSessionById(preferredSessionId, fallbackToFirst: true);
+    }
+
+    private void RefreshConversationSessionSummaries()
+    {
+        var sessions = _conversationSessionStore.ListSessions();
+        var preferredSessionId = _activeConversationSessionId ?? _selectedConversationSessionId;
+
+        _conversationSessions.Clear();
+
+        foreach (var session in sessions)
+        {
+            _conversationSessions.Add(session);
+        }
+
+        UpdateConversationSessionsPlaceholderVisibility();
+
+        _isChangingSessionSelection = true;
+        ConversationSessionsListBox.SelectedItem = string.IsNullOrWhiteSpace(preferredSessionId)
+            ? null
+            : _conversationSessions.FirstOrDefault(item =>
+                string.Equals(item.Id, preferredSessionId, StringComparison.OrdinalIgnoreCase));
+        _isChangingSessionSelection = false;
+    }
+
+    private void EnsureConversationSessionStarted()
+    {
+        if (!string.IsNullOrWhiteSpace(_activeConversationSessionId))
+        {
+            return;
+        }
+
+        var record = _conversationSessionStore.StartSession(ReadSelectedLiveModel(_settingsService.Current.LiveModel));
+        _activeConversationSessionId = record.Id;
+        _selectedConversationSessionId = record.Id;
+        _conversationLogEntries.Clear();
+        _latestUserLogEntry = null;
+        _latestModelLogEntry = null;
+        LoadConversationSessions();
+        SetStatus("Live session started. Conversation history is being saved.");
+    }
+
+    private void FinalizeActiveConversationSession()
+    {
+        if (string.IsNullOrWhiteSpace(_activeConversationSessionId))
+        {
+            return;
+        }
+
+        _conversationSessionStore.SaveSnapshot(_activeConversationSessionId, _conversationLogEntries);
+        _conversationSessionStore.EndSession(_activeConversationSessionId);
+        _activeConversationSessionId = null;
+        LoadConversationSessions();
+    }
+
+    private void ClearConversationView()
+    {
+        _conversationLogEntries.Clear();
+        _latestUserLogEntry = null;
+        _latestModelLogEntry = null;
+        UpdateLogsPlaceholderVisibility();
+    }
+
+    private void SelectConversationSessionById(string? sessionId, bool fallbackToFirst = false)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            if (fallbackToFirst && _conversationSessions.Count > 0)
+            {
+                SelectConversationSessionById(_conversationSessions[0].Id);
+            }
+
+            return;
+        }
+
+        var summary = _conversationSessions.FirstOrDefault(item =>
+            string.Equals(item.Id, sessionId, StringComparison.OrdinalIgnoreCase));
+
+        if (summary is null)
+        {
+            if (fallbackToFirst && _conversationSessions.Count > 0)
+            {
+                SelectConversationSessionById(_conversationSessions[0].Id);
+            }
+
+            return;
+        }
+
+        var record = _conversationSessionStore.GetSession(summary.Id);
+        if (record is null)
+        {
+            return;
+        }
+
+        _isChangingSessionSelection = true;
+        ConversationSessionsListBox.SelectedItem = summary;
+        _isChangingSessionSelection = false;
+
+        _selectedConversationSessionId = summary.Id;
+        PopulateConversationView(record);
+    }
+
+    private void PopulateConversationView(ConversationSessionRecord record)
+    {
+        ClearConversationView();
+
+        foreach (var entry in record.Entries)
+        {
+            var logEntry = new ConversationLogEntry(entry.Timestamp.ToLocalTime(), entry.Role, entry.Text);
+            _conversationLogEntries.Add(logEntry);
+
+            if (string.Equals(entry.Role, "Gemini", StringComparison.OrdinalIgnoreCase))
+            {
+                _latestModelLogEntry = logEntry;
+            }
+            else if (string.Equals(entry.Role, "You", StringComparison.OrdinalIgnoreCase))
+            {
+                _latestUserLogEntry = logEntry;
+            }
+        }
+
+        ConversationSessionHeaderTextBlock.Text = record.StartedAt.ToLocalTime().ToString("dddd, MMM d • HH:mm");
+        var status = string.IsNullOrWhiteSpace(record.Status) ? "Saved" : record.Status;
+        var endedText = record.EndedAt is null
+            ? "still open"
+            : $"ended {record.EndedAt.Value.ToLocalTime():HH:mm}";
+        ConversationSessionMetaTextBlock.Text =
+            $"{status} • {record.Entries.Count} {(record.Entries.Count == 1 ? "message" : "messages")} • {endedText}";
+
+        UpdateLogsPlaceholderVisibility();
+        ScrollLogsToEnd();
     }
 
     private void LoadSettings(AppSettings settings)
@@ -340,6 +509,28 @@ public partial class MainWindow : Window
         SetStatus("Audio and screen sources refreshed.");
     }
 
+    private void ConversationSessionsListBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isChangingSessionSelection || ConversationSessionsListBox.SelectedItem is not ConversationSessionSummary summary)
+        {
+            return;
+        }
+
+        if (_isSessionRunning &&
+            !string.IsNullOrWhiteSpace(_activeConversationSessionId) &&
+            !string.Equals(summary.Id, _activeConversationSessionId, StringComparison.OrdinalIgnoreCase))
+        {
+            _isChangingSessionSelection = true;
+            ConversationSessionsListBox.SelectedItem = _conversationSessions.FirstOrDefault(item =>
+                string.Equals(item.Id, _activeConversationSessionId, StringComparison.OrdinalIgnoreCase));
+            _isChangingSessionSelection = false;
+            SetStatus("Stop the current live session to browse older saved conversations.");
+            return;
+        }
+
+        SelectConversationSessionById(summary.Id);
+    }
+
     private void CopyLogsButton_OnClick(object sender, RoutedEventArgs e)
     {
         if (_conversationLogEntries.Count == 0)
@@ -359,11 +550,16 @@ public partial class MainWindow : Window
 
     private void ClearLogsButton_OnClick(object sender, RoutedEventArgs e)
     {
-        _conversationLogEntries.Clear();
-        _latestUserLogEntry = null;
-        _latestModelLogEntry = null;
-        UpdateLogsPlaceholderVisibility();
-        SetStatus("Cleared conversation logs.");
+        if (string.IsNullOrWhiteSpace(_selectedConversationSessionId))
+        {
+            SetStatus("There are no saved conversation logs to clear.");
+            return;
+        }
+
+        _conversationSessionStore.ClearSessionEntries(_selectedConversationSessionId);
+        ClearConversationView();
+        LoadConversationSessions();
+        SetStatus("Cleared the selected conversation session.");
     }
 
     private void MicrophoneGainSlider_OnValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -477,6 +673,11 @@ public partial class MainWindow : Window
 
     private void LogConversationUpdate(string role, string? text, bool isModel)
     {
+        if (string.IsNullOrWhiteSpace(_activeConversationSessionId))
+        {
+            return;
+        }
+
         var cleaned = text?.Trim();
         if (string.IsNullOrWhiteSpace(cleaned))
         {
@@ -497,6 +698,7 @@ public partial class MainWindow : Window
             {
                 latestEntry.Text = cleaned;
                 latestEntry.Timestamp = DateTime.Now;
+                PersistConversationSnapshot();
                 ScrollLogsToEnd();
                 return;
             }
@@ -531,7 +733,19 @@ public partial class MainWindow : Window
         }
 
         UpdateLogsPlaceholderVisibility();
+        PersistConversationSnapshot();
         ScrollLogsToEnd();
+    }
+
+    private void PersistConversationSnapshot()
+    {
+        if (string.IsNullOrWhiteSpace(_activeConversationSessionId))
+        {
+            return;
+        }
+
+        _conversationSessionStore.SaveSnapshot(_activeConversationSessionId, _conversationLogEntries);
+        RefreshConversationSessionSummaries();
     }
 
     private void PickTextColorButton_OnClick(object sender, RoutedEventArgs e)
@@ -1093,6 +1307,13 @@ public partial class MainWindow : Window
     private void UpdateLogsPlaceholderVisibility()
     {
         LogsPlaceholderTextBlock.Visibility = _conversationLogEntries.Count == 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void UpdateConversationSessionsPlaceholderVisibility()
+    {
+        ConversationSessionsPlaceholderTextBlock.Visibility = _conversationSessions.Count == 0
             ? Visibility.Visible
             : Visibility.Collapsed;
     }
