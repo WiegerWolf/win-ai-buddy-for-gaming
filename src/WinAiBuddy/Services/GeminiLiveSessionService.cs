@@ -8,6 +8,7 @@ namespace WinAiBuddy.Services;
 public sealed class GeminiLiveSessionService : IAsyncDisposable
 {
     private const int MaxBufferedRealtimeInputs = 1000;
+    private static readonly TimeSpan AudioStreamFlushDelay = TimeSpan.FromSeconds(1.25);
     private const string TransparentUnsupportedMessage = "transparent parameter is not supported";
     private static readonly Regex DuplicateWhitespaceRegex = new(@"\s{2,}", RegexOptions.Compiled);
     private static readonly Regex PunctuationSpacingRegex = new(@"(?<=[,!?;:.])(?=\p{L})", RegexOptions.Compiled);
@@ -23,6 +24,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
     private CancellationTokenSource? _receiveLoopCts;
     private CancellationTokenSource? _serviceLifetimeCts;
     private Task? _receiveLoopTask;
+    private Task? _inputTurnFlushWatchdogTask;
 
     private AppSettings? _activeSettings;
     private string? _sessionResumptionHandle;
@@ -42,6 +44,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
     private DateTime _lastReceivedAudioLogAt = DateTime.MinValue;
     private bool _inputTurnOpen;
     private bool _outputTurnOpen;
+    private bool _audioStreamEndSentForCurrentTurn;
     private int _bufferedAudioChunksSinceLastLog;
     private int _bufferedVideoFramesSinceLastLog;
     private int _receivedAudioChunksSinceLastLog;
@@ -80,6 +83,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         _activeSettings = settings;
         _shouldBeRunning = true;
         _serviceLifetimeCts = new CancellationTokenSource();
+        _inputTurnFlushWatchdogTask = Task.Run(() => InputTurnFlushWatchdogAsync(_serviceLifetimeCts.Token));
         ResetDiagnosticsCounters();
         var sessionLogPath = _diagnosticsLogService.StartSession(settings.LiveModel);
         LogSession("Live", $"Start requested | model={settings.LiveModel} | voice={settings.Voice} | streamScreen={settings.StreamScreenFrames} | restoredTurns={restoredConversation?.Count ?? 0} | log={sessionLogPath}");
@@ -138,6 +142,19 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         _serviceLifetimeCts?.Cancel();
 
         await DisposeCurrentSessionAsync(resetTranscripts: true, cancellationToken);
+
+        if (_inputTurnFlushWatchdogTask is not null)
+        {
+            try
+            {
+                await _inputTurnFlushWatchdogTask.WaitAsync(cancellationToken);
+            }
+            catch
+            {
+            }
+
+            _inputTurnFlushWatchdogTask = null;
+        }
 
         _serviceLifetimeCts?.Dispose();
         _serviceLifetimeCts = null;
@@ -533,6 +550,80 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         }
     }
 
+    private async Task InputTurnFlushWatchdogAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(250));
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                var shouldFlush = false;
+
+                lock (_transcriptLock)
+                {
+                    shouldFlush = _shouldBeRunning &&
+                                  _inputTurnOpen &&
+                                  !_audioStreamEndSentForCurrentTurn &&
+                                  _lastInputTranscriptAt != DateTime.MinValue &&
+                                  (DateTime.UtcNow - _lastInputTranscriptAt) >= AudioStreamFlushDelay;
+
+                    if (shouldFlush)
+                    {
+                        _audioStreamEndSentForCurrentTurn = true;
+                    }
+                }
+
+                if (!shouldFlush)
+                {
+                    continue;
+                }
+
+                await SendAudioStreamEndAsync(cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+    }
+
+    private async Task SendAudioStreamEndAsync(CancellationToken cancellationToken)
+    {
+        var session = _session;
+        if (session is null || !_shouldBeRunning)
+        {
+            return;
+        }
+
+        await _sendLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (!ReferenceEquals(session, _session))
+            {
+                return;
+            }
+
+            await session.SendRealtimeInputAsync(new LiveSendRealtimeInputParameters
+            {
+                AudioStreamEnd = true
+            }, cancellationToken);
+            LogSession("Audio", "Sent audioStreamEnd to flush paused input.");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            LogSessionException("Audio", "audioStreamEnd send failed.", ex);
+            QueueRecovery($"audioStreamEnd send failed: {ex.Message}");
+        }
+        finally
+        {
+            _sendLock.Release();
+        }
+    }
+
     private async Task DisposeCurrentSessionAsync(bool resetTranscripts, CancellationToken cancellationToken)
     {
         _receiveLoopCts?.Cancel();
@@ -674,6 +765,11 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
 
         if (aggregated is not null)
         {
+            lock (_transcriptLock)
+            {
+                _audioStreamEndSentForCurrentTurn = false;
+            }
+
             InputTranscriptionChanged?.Invoke(NormalizeTranscriptForDisplay(aggregated));
         }
     }
@@ -839,6 +935,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         {
             _inputTurnOpen = false;
             _outputTurnOpen = false;
+            _audioStreamEndSentForCurrentTurn = false;
         }
     }
 
@@ -852,6 +949,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
             _lastOutputTranscriptAt = DateTime.MinValue;
             _inputTurnOpen = false;
             _outputTurnOpen = false;
+            _audioStreamEndSentForCurrentTurn = false;
         }
     }
 
