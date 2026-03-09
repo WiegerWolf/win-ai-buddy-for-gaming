@@ -68,6 +68,7 @@ public partial class MainWindow : Window
         RestartMicPreview();
         StartScreenPreviewTimer();
         LoadConversationSessions();
+        LoadLastSessionPreview();
         UpdateLogsPlaceholderVisibility();
         UpdateSessionButtons(isRunning: false);
         UpdateConversationButtons();
@@ -198,6 +199,78 @@ public partial class MainWindow : Window
         _activeConversationSessionId = null;
         _pendingResumeSession = null;
         LoadConversationSessions();
+        LoadLastSessionPreview();
+    }
+
+    private ConversationSessionRecord? _lastSessionForResume;
+
+    private void LoadLastSessionPreview()
+    {
+        var sessions = _conversationSessionStore.ListSessions();
+        var latest = sessions.FirstOrDefault();
+
+        if (latest is null)
+        {
+            LastSessionCard.Visibility = Visibility.Collapsed;
+            LastSessionPlaceholder.Visibility = Visibility.Visible;
+            _lastSessionForResume = null;
+            return;
+        }
+
+        var record = _conversationSessionStore.GetSession(latest.Id);
+        if (record is null || record.Entries.Count == 0)
+        {
+            LastSessionCard.Visibility = Visibility.Collapsed;
+            LastSessionPlaceholder.Visibility = Visibility.Visible;
+            _lastSessionForResume = null;
+            return;
+        }
+
+        _lastSessionForResume = record;
+
+        var startedLocal = record.StartedAt.ToLocalTime();
+        var endedText = record.EndedAt is null ? "still open" : $"ended {record.EndedAt.Value.ToLocalTime():HH:mm}";
+        LastSessionMeta.Text = $"{startedLocal:MMM d, HH:mm} \u2014 {record.Entries.Count} {(record.Entries.Count == 1 ? "message" : "messages")} \u2014 {endedText}";
+
+        var previewEntries = record.Entries
+            .TakeLast(5)
+            .Select(entry => new ConversationLogEntry(entry.Timestamp.ToLocalTime(), entry.Role, entry.Text))
+            .ToList();
+        LastSessionMessages.ItemsSource = previewEntries;
+
+        DashboardResumeButton.IsEnabled = !_isSessionRunning;
+        LastSessionCard.Visibility = Visibility.Visible;
+        LastSessionPlaceholder.Visibility = Visibility.Collapsed;
+    }
+
+    private async void DashboardResumeButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_isSessionRunning)
+        {
+            SetStatus("Stop the current live session before resuming an older one.");
+            return;
+        }
+
+        if (_lastSessionForResume is null || _lastSessionForResume.Entries.Count == 0)
+        {
+            SetStatus("No session available to resume.");
+            return;
+        }
+
+        try
+        {
+            _pendingResumeSession = _lastSessionForResume;
+            var settings = ReadSettingsFromUi();
+            _settingsService.Save(settings);
+            _overlayService.ApplySettings(settings);
+            SetStatus("Starting live session from the last saved conversation...");
+            await _orchestrator.StartLiveSessionAsync(_lastSessionForResume.Entries);
+        }
+        catch (Exception ex)
+        {
+            _pendingResumeSession = null;
+            SetStatus($"Resume failed: {ex.Message}");
+        }
     }
 
     private void ClearConversationView()
@@ -1364,6 +1437,7 @@ public partial class MainWindow : Window
     {
         StartSessionButton.IsEnabled = !isRunning;
         StopSessionButton.IsEnabled = isRunning;
+        DashboardResumeButton.IsEnabled = !isRunning && _lastSessionForResume is not null;
     }
 
     private void UpdateConversationButtons()
@@ -1411,38 +1485,59 @@ public partial class MainWindow : Window
         return ParseOrDefault(ScreenIntervalTextBox.Text, fallback, 100, 5000);
     }
 
-    private void NavSession_Checked(object sender, RoutedEventArgs e)
+    private void NavDashboard_Checked(object sender, RoutedEventArgs e)
     {
         if (!IsInitialized) return;
-        SessionPanel.Visibility = Visibility.Visible;
-        SettingsPanel.Visibility = Visibility.Collapsed;
-        ConversationPanel.Visibility = Visibility.Collapsed;
+        ShowPanel(DashboardPanel);
+        LoadLastSessionPreview();
     }
 
-    private void NavSettings_Checked(object sender, RoutedEventArgs e)
+    private void NavHistory_Checked(object sender, RoutedEventArgs e)
     {
         if (!IsInitialized) return;
-        SessionPanel.Visibility = Visibility.Collapsed;
-        SettingsPanel.Visibility = Visibility.Visible;
-        ConversationPanel.Visibility = Visibility.Collapsed;
+        ShowPanel(HistoryPanel);
     }
 
-    private void NavConversation_Checked(object sender, RoutedEventArgs e)
+    private void NavConnection_Checked(object sender, RoutedEventArgs e)
     {
         if (!IsInitialized) return;
-        SessionPanel.Visibility = Visibility.Collapsed;
-        SettingsPanel.Visibility = Visibility.Collapsed;
-        ConversationPanel.Visibility = Visibility.Visible;
+        ShowPanel(ConnectionPanel);
     }
 
-    private void OpenSettingsButton_OnClick(object sender, RoutedEventArgs e)
+    private void NavAudioCapture_Checked(object sender, RoutedEventArgs e)
     {
-        NavSettings.IsChecked = true;
+        if (!IsInitialized) return;
+        ShowPanel(AudioCapturePanel);
     }
 
-    private void OpenConversationButton_OnClick(object sender, RoutedEventArgs e)
+    private void NavOverlay_Checked(object sender, RoutedEventArgs e)
     {
-        NavConversation.IsChecked = true;
+        if (!IsInitialized) return;
+        ShowPanel(OverlayPanel);
+    }
+
+    private void NavAiBehavior_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!IsInitialized) return;
+        ShowPanel(AiBehaviorPanel);
+    }
+
+    private void NavGeneral_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!IsInitialized) return;
+        ShowPanel(GeneralPanel);
+    }
+
+    private void ShowPanel(UIElement target)
+    {
+        DashboardPanel.Visibility = Visibility.Collapsed;
+        HistoryPanel.Visibility = Visibility.Collapsed;
+        ConnectionPanel.Visibility = Visibility.Collapsed;
+        AudioCapturePanel.Visibility = Visibility.Collapsed;
+        OverlayPanel.Visibility = Visibility.Collapsed;
+        AiBehaviorPanel.Visibility = Visibility.Collapsed;
+        GeneralPanel.Visibility = Visibility.Collapsed;
+        target.Visibility = Visibility.Visible;
     }
 
     private void ThinkingModeComboBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)

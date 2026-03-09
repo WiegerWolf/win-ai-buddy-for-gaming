@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build src/WinAiBuddy/WinAiBuddy.csproj)",
+      "Bash(dotnet build src/WinAiBuddy/WinAiBuddy.csproj -o /tmp/winaibuddy-build)"
+    ]
+  }
+}

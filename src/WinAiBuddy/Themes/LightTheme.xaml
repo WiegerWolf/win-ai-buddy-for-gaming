@@ -17,6 +17,11 @@
     <SolidColorBrush x:Key="TextSecondary" Color="#FF4F5F73" />
     <SolidColorBrush x:Key="TextMuted" Color="#FF6D7C8E" />
 
+    <SolidColorBrush x:Key="NavGroupLabelColor" Color="#FF6D7C8E" />
+    <SolidColorBrush x:Key="NavDividerColor" Color="#FFD7DCE3" />
+    <SolidColorBrush x:Key="ChatBubbleUser" Color="#FFE8F0FE" />
+    <SolidColorBrush x:Key="ChatBubbleModel" Color="#FFF5F5F5" />
+
     <Style x:Key="CardStyle" TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource CardBackground}" />
         <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}" />
@@ -106,5 +111,25 @@
         <Setter Property="VerticalContentAlignment" Value="Top" />
         <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
         <Setter Property="Padding" Value="8" />
+    </Style>
+
+    <Style x:Key="NavGroupLabel" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource NavGroupLabelColor}" />
+        <Setter Property="Margin" Value="20,4,20,8" />
+    </Style>
+
+    <Style x:Key="NavDividerStyle" TargetType="Border">
+        <Setter Property="Height" Value="1" />
+        <Setter Property="Background" Value="{DynamicResource NavDividerColor}" />
+        <Setter Property="Margin" Value="16,8,16,8" />
+    </Style>
+
+    <Style x:Key="ChatBubbleStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource ChatBubbleModel}" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="14,10" />
+        <Setter Property="Margin" Value="0,3" />
     </Style>
 </ResourceDictionary>

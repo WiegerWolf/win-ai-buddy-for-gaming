@@ -16,12 +16,13 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
+        <!-- ===== SIDEBAR ===== -->
         <Border Grid.Column="0"
                 Background="{StaticResource SidebarBackground}"
                 BorderBrush="{StaticResource CardBorder}"
                 BorderThickness="0,0,1,0">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Top" Margin="20,24,20,32">
+                <StackPanel DockPanel.Dock="Top" Margin="20,24,20,16">
                     <TextBlock Text="Win AI Buddy"
                                FontSize="18"
                                FontWeight="SemiBold"
@@ -36,30 +37,57 @@
                            Foreground="{StaticResource TextMuted}"
                            Text="v1.2" />
 
-                <StackPanel>
-                    <RadioButton x:Name="NavSession"
-                                 Content="Session"
-                                 IsChecked="True"
-                                 Style="{StaticResource NavRadioButton}"
-                                 Checked="NavSession_Checked" />
-                    <RadioButton x:Name="NavSettings"
-                                 Content="Settings"
-                                 Style="{StaticResource NavRadioButton}"
-                                 Checked="NavSettings_Checked" />
-                    <RadioButton x:Name="NavConversation"
-                                 Content="Conversation"
-                                 Style="{StaticResource NavRadioButton}"
-                                 Checked="NavConversation_Checked" />
-                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <!-- Main navigation -->
+                        <RadioButton x:Name="NavDashboard"
+                                     Content="Dashboard"
+                                     IsChecked="True"
+                                     Style="{StaticResource NavRadioButton}"
+                                     Checked="NavDashboard_Checked" />
+                        <RadioButton x:Name="NavHistory"
+                                     Content="History"
+                                     Style="{StaticResource NavRadioButton}"
+                                     Checked="NavHistory_Checked" />
+
+                        <!-- Settings divider -->
+                        <Border Style="{StaticResource NavDividerStyle}" />
+                        <TextBlock Text="SETTINGS" Style="{StaticResource NavGroupLabel}" />
+
+                        <RadioButton x:Name="NavConnection"
+                                     Content="Connection"
+                                     Style="{StaticResource NavRadioButton}"
+                                     Checked="NavConnection_Checked" />
+                        <RadioButton x:Name="NavAudioCapture"
+                                     Content="Audio &amp; Capture"
+                                     Style="{StaticResource NavRadioButton}"
+                                     Checked="NavAudioCapture_Checked" />
+                        <RadioButton x:Name="NavOverlay"
+                                     Content="Overlay"
+                                     Style="{StaticResource NavRadioButton}"
+                                     Checked="NavOverlay_Checked" />
+                        <RadioButton x:Name="NavAiBehavior"
+                                     Content="AI Behavior"
+                                     Style="{StaticResource NavRadioButton}"
+                                     Checked="NavAiBehavior_Checked" />
+                        <RadioButton x:Name="NavGeneral"
+                                     Content="General"
+                                     Style="{StaticResource NavRadioButton}"
+                                     Checked="NavGeneral_Checked" />
+                    </StackPanel>
+                </ScrollViewer>
             </DockPanel>
         </Border>
 
+        <!-- ===== CONTENT AREA ===== -->
         <Grid Grid.Column="1">
-            <Grid x:Name="SessionPanel">
+
+            <!-- ===== DASHBOARD PANEL ===== -->
+            <Grid x:Name="DashboardPanel">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="32">
                         <DockPanel>
-                            <TextBlock Text="Session"
+                            <TextBlock Text="Dashboard"
                                        Style="{StaticResource SectionHeader}" />
                             <Border x:Name="SessionStatusPill"
                                     DockPanel.Dock="Right"
@@ -111,6 +139,56 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- Last Session Preview -->
+                        <Border x:Name="LastSessionCard" Style="{StaticResource CardStyle}" Visibility="Collapsed">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,8">
+                                    <TextBlock Text="Last Session"
+                                               Style="{StaticResource CardHeader}"
+                                               Margin="0" />
+                                    <Button x:Name="DashboardResumeButton"
+                                            DockPanel.Dock="Right"
+                                            Width="100"
+                                            Content="Resume"
+                                            Style="{StaticResource AccentButton}"
+                                            Click="DashboardResumeButton_OnClick" />
+                                </DockPanel>
+                                <TextBlock x:Name="LastSessionMeta"
+                                           Style="{StaticResource FieldDescription}"
+                                           Margin="0,0,0,12" />
+                                <ItemsControl x:Name="LastSessionMessages">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource ChatBubbleStyle}" Margin="0,3">
+                                                <StackPanel>
+                                                    <DockPanel>
+                                                        <TextBlock FontWeight="SemiBold"
+                                                                   FontSize="12"
+                                                                   Foreground="{StaticResource AccentPrimary}"
+                                                                   Text="{Binding Role}" />
+                                                        <TextBlock FontSize="11"
+                                                                   Margin="8,0,0,0"
+                                                                   Foreground="{StaticResource TextMuted}"
+                                                                   Text="{Binding DisplayTimestamp}" />
+                                                    </DockPanel>
+                                                    <TextBlock Margin="0,4,0,0"
+                                                               TextWrapping="Wrap"
+                                                               Foreground="{StaticResource TextPrimary}"
+                                                               Text="{Binding Text}" />
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock x:Name="LastSessionPlaceholder"
+                                   Margin="0,0,0,16"
+                                   Foreground="{StaticResource TextMuted}"
+                                   Text="No sessions yet. Start your first session above."
+                                   Visibility="Visible" />
+
                         <TextBlock x:Name="InputTranscriptTextBlock"
                                    Visibility="Collapsed"
                                    Text="Nothing heard yet." />
@@ -121,7 +199,8 @@
                 </ScrollViewer>
             </Grid>
 
-            <Grid x:Name="SettingsPanel" Visibility="Collapsed">
+            <!-- ===== HISTORY PANEL ===== -->
+            <Grid x:Name="HistoryPanel" Visibility="Collapsed">
                 <Grid Margin="32">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -129,655 +208,7 @@
                     </Grid.RowDefinitions>
 
                     <DockPanel Margin="0,0,0,20">
-                        <TextBlock Text="Settings"
-                                   Style="{StaticResource SectionHeader}" />
-                        <Button DockPanel.Dock="Right"
-                                Width="150"
-                                Style="{StaticResource AccentButton}"
-                                Content="Save Settings"
-                                Click="SaveButton_OnClick" />
-                    </DockPanel>
-
-                    <TabControl Grid.Row="1">
-                        <TabItem Header="Connection">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel Margin="16">
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Text="Connection &amp; Model"
-                                                       Style="{StaticResource CardHeader}" />
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="180" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-
-                                                <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" Text="Gemini API key" Style="{StaticResource FieldLabel}" />
-                                                <PasswordBox x:Name="ApiKeyPasswordBox" Grid.Row="0" Grid.Column="1" Margin="0,6" />
-
-                                                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" Text="Live model" Style="{StaticResource FieldLabel}" />
-                                                <ComboBox x:Name="LiveModelComboBox" Grid.Row="1" Grid.Column="1" Margin="0,6" />
-
-                                                <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" Text="Media resolution" Style="{StaticResource FieldLabel}" />
-                                                <ComboBox x:Name="MediaResolutionComboBox" Grid.Row="2" Grid.Column="1" Margin="0,6" />
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Text="System Prompt"
-                                                       Style="{StaticResource CardHeader}" />
-                                            <TextBlock Style="{StaticResource FieldDescription}"
-                                                       Text="This is the standing instruction Gemini uses throughout the live session." />
-                                            <TextBox x:Name="SystemPromptTextBox"
-                                                     Margin="0,12,0,0"
-                                                     Style="{StaticResource MultiLineTextBox}" />
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
-                            </ScrollViewer>
-                        </TabItem>
-
-                        <TabItem Header="Audio &amp; Capture">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel Margin="16">
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Text="Voice &amp; Audio"
-                                                       Style="{StaticResource CardHeader}" />
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="180" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-
-                                                <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" Text="Voice" Style="{StaticResource FieldLabel}" />
-                                                <Grid Grid.Row="0" Grid.Column="1" Margin="0,6">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <ComboBox x:Name="VoiceComboBox"
-                                                              Grid.Column="0"
-                                                              DisplayMemberPath="DisplayName"
-                                                              SelectedValuePath="Name" />
-                                                    <Button Grid.Column="1"
-                                                            Width="90"
-                                                            Margin="10,0,0,0"
-                                                            Content="Preview"
-                                                            Click="PreviewVoiceButton_OnClick" />
-                                                    <Button Grid.Column="2"
-                                                            Width="70"
-                                                            Margin="10,0,0,0"
-                                                            Content="Stop"
-                                                            Click="StopPreviewButton_OnClick" />
-                                                </Grid>
-
-                                                <TextBlock x:Name="VoicePreviewStatusTextBlock"
-                                                           Grid.Row="1"
-                                                           Grid.Column="1"
-                                                           Margin="0,0,0,12"
-                                                           Style="{StaticResource FieldDescription}"
-                                                           Text="Preview a local WAV sample for the selected voice." />
-
-                                                <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" Text="Microphone" Style="{StaticResource FieldLabel}" />
-                                                <ComboBox x:Name="MicrophoneComboBox"
-                                                          Grid.Row="2"
-                                                          Grid.Column="1"
-                                                          Margin="0,6"
-                                                          SelectionChanged="MicrophoneComboBox_OnSelectionChanged"
-                                                          DisplayMemberPath="DisplayName"
-                                                          SelectedValuePath="DeviceName" />
-
-                                                <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,16,8" Text="Mic preview" Style="{StaticResource FieldLabel}" />
-                                                <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,6">
-                                                    <ProgressBar x:Name="MicrophoneLevelProgressBar"
-                                                                 Height="12"
-                                                                 Minimum="0"
-                                                                 Maximum="100"
-                                                                 Value="0" />
-                                                    <TextBlock x:Name="MicrophonePreviewStatusTextBlock"
-                                                               Margin="0,8,0,0"
-                                                               Style="{StaticResource FieldDescription}"
-                                                               Text="Select a microphone to preview its live level." />
-                                                </StackPanel>
-
-                                                <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" Text="Mic volume" Style="{StaticResource FieldLabel}" />
-                                                <Grid Grid.Row="4" Grid.Column="1" Margin="0,6">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="60" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <Slider x:Name="MicrophoneGainSlider"
-                                                            Grid.Column="0"
-                                                            Minimum="0.0"
-                                                            Maximum="3.0"
-                                                            TickFrequency="0.1"
-                                                            IsSnapToTickEnabled="False"
-                                                            ValueChanged="MicrophoneGainSlider_OnValueChanged" />
-                                                    <TextBlock x:Name="MicrophoneGainValueTextBlock"
-                                                               Grid.Column="1"
-                                                               Margin="12,0,0,0"
-                                                               VerticalAlignment="Center"
-                                                               HorizontalAlignment="Right"
-                                                               Foreground="{StaticResource TextPrimary}"
-                                                               Text="100%" />
-                                                </Grid>
-                                            </Grid>
-
-                                            <Button Width="170"
-                                                    Margin="0,12,0,0"
-                                                    HorizontalAlignment="Left"
-                                                    Content="Refresh Audio Sources"
-                                                    Click="RefreshSourcesButton_OnClick" />
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Text="Screen Capture"
-                                                       Style="{StaticResource CardHeader}" />
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="180" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-
-                                                <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" Text="Screen source" Style="{StaticResource FieldLabel}" />
-                                                <ComboBox x:Name="ScreenSourceComboBox"
-                                                          Grid.Row="0"
-                                                          Grid.Column="1"
-                                                          Margin="0,6"
-                                                          SelectionChanged="ScreenSourceComboBox_OnSelectionChanged"
-                                                          DisplayMemberPath="DisplayName"
-                                                          SelectedValuePath="DeviceName" />
-
-                                                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="Screen preview" Style="{StaticResource FieldLabel}" />
-                                                <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,6">
-                                                    <Border Height="220"
-                                                            BorderBrush="{StaticResource CardBorder}"
-                                                            BorderThickness="1"
-                                                            CornerRadius="10"
-                                                            Background="{StaticResource CardBackground}">
-                                                        <Grid>
-                                                            <Image x:Name="ScreenPreviewImage"
-                                                                   Stretch="Uniform"
-                                                                   SnapsToDevicePixels="True" />
-                                                            <TextBlock x:Name="ScreenPreviewPlaceholderTextBlock"
-                                                                       HorizontalAlignment="Center"
-                                                                       VerticalAlignment="Center"
-                                                                       Foreground="{StaticResource TextMuted}"
-                                                                       Text="Loading screen preview..." />
-                                                        </Grid>
-                                                    </Border>
-                                                    <TextBlock x:Name="ScreenPreviewStatusTextBlock"
-                                                               Margin="0,8,0,0"
-                                                               Style="{StaticResource FieldDescription}"
-                                                               Text="Live preview of the selected screen." />
-                                                </StackPanel>
-
-                                                <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="Capture interval (ms)" Style="{StaticResource FieldLabel}" />
-                                                <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,6">
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*" />
-                                                            <ColumnDefinition Width="Auto" />
-                                                        </Grid.ColumnDefinitions>
-                                                        <TextBox x:Name="ScreenIntervalTextBox"
-                                                                 Grid.Column="0"
-                                                                 MaxLength="4"
-                                                                 TextChanged="ScreenIntervalTextBox_OnTextChanged"
-                                                                 PreviewTextInput="ScreenIntervalTextBox_OnPreviewTextInput" />
-                                                        <Grid Grid.Column="1" Width="60" Margin="8,0,0,0">
-                                                            <Grid.RowDefinitions>
-                                                                <RowDefinition Height="*" />
-                                                                <RowDefinition Height="*" />
-                                                            </Grid.RowDefinitions>
-                                                            <RepeatButton Grid.Row="0"
-                                                                          Content="&#x25B2;"
-                                                                          FontSize="8"
-                                                                          Click="ScreenIntervalUpButton_OnClick"
-                                                                          Delay="250"
-                                                                          Interval="70"
-                                                                          IsTabStop="False" />
-                                                            <RepeatButton Grid.Row="1"
-                                                                          Content="&#x25BC;"
-                                                                          FontSize="8"
-                                                                          Click="ScreenIntervalDownButton_OnClick"
-                                                                          Delay="250"
-                                                                          Interval="70"
-                                                                          IsTabStop="False" />
-                                                        </Grid>
-                                                    </Grid>
-                                                    <TextBlock Margin="0,8,0,0"
-                                                               Style="{StaticResource FieldDescription}"
-                                                               Text="Controls both the Gemini screen-frame send rate and this local preview refresh rate. Lower values update faster but use more CPU and network." />
-                                                </StackPanel>
-
-                                                <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,16,8" Text="Frame streaming" Style="{StaticResource FieldLabel}" />
-                                                <CheckBox x:Name="StreamScreenFramesCheckBox"
-                                                          Grid.Row="3"
-                                                          Grid.Column="1"
-                                                          Margin="0,6"
-                                                          Content="Stream screen frames continuously" />
-
-                                                <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" Text="Source refresh" Style="{StaticResource FieldLabel}" />
-                                                <Button Grid.Row="4"
-                                                        Grid.Column="1"
-                                                        Width="180"
-                                                        Margin="0,6"
-                                                        HorizontalAlignment="Left"
-                                                        Content="Refresh Screen Sources"
-                                                        Click="RefreshSourcesButton_OnClick" />
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
-                            </ScrollViewer>
-                        </TabItem>
-
-                        <TabItem Header="Overlay">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel Margin="16">
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Text="Overlay Appearance"
-                                                       Style="{StaticResource CardHeader}" />
-                                            <TextBlock Margin="0,8,0,12"
-                                                       Style="{StaticResource FieldDescription}"
-                                                       Text="Overlay works best with windowed or borderless fullscreen games. Windows may keep true exclusive fullscreen games above desktop overlays, so the overlay might not appear there." />
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="180" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-
-                                                <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" Text="Display seconds" Style="{StaticResource FieldLabel}" />
-                                                <TextBox x:Name="OverlaySecondsTextBox" Grid.Row="0" Grid.Column="1" Margin="0,6" />
-
-                                                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" Text="Text opacity" Style="{StaticResource FieldLabel}" />
-                                                <Grid Grid.Row="1" Grid.Column="1" Margin="0,6">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="60" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <Slider x:Name="OverlayOpacitySlider"
-                                                            Grid.Column="0"
-                                                            Minimum="0.0"
-                                                            Maximum="1.0"
-                                                            TickFrequency="0.05"
-                                                            IsSnapToTickEnabled="False"
-                                                            ValueChanged="OverlayOpacitySlider_OnValueChanged" />
-                                                    <TextBlock x:Name="OverlayOpacityValueTextBlock"
-                                                               Grid.Column="1"
-                                                               Margin="12,0,0,0"
-                                                               VerticalAlignment="Center"
-                                                               HorizontalAlignment="Right"
-                                                               Foreground="{StaticResource TextPrimary}"
-                                                               Text="0.94" />
-                                                </Grid>
-
-                                                <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" Text="Background opacity" Style="{StaticResource FieldLabel}" />
-                                                <Grid Grid.Row="2" Grid.Column="1" Margin="0,6">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="60" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <Slider x:Name="OverlayBgOpacitySlider"
-                                                            Grid.Column="0"
-                                                            Minimum="0.0"
-                                                            Maximum="1.0"
-                                                            TickFrequency="0.05"
-                                                            IsSnapToTickEnabled="False"
-                                                            ValueChanged="OverlayBgOpacitySlider_OnValueChanged" />
-                                                    <TextBlock x:Name="OverlayBgOpacityValueTextBlock"
-                                                               Grid.Column="1"
-                                                               Margin="12,0,0,0"
-                                                               VerticalAlignment="Center"
-                                                               HorizontalAlignment="Right"
-                                                               Foreground="{StaticResource TextPrimary}"
-                                                               Text="0.85" />
-                                                </Grid>
-
-                                                <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,16,8" Text="Background color" Style="{StaticResource FieldLabel}" />
-                                                <Button Grid.Row="3"
-                                                        Grid.Column="1"
-                                                        Margin="0,6"
-                                                        HorizontalAlignment="Left"
-                                                        Click="PickBgColorButton_OnClick">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <Border x:Name="OverlayBgColorSwatch"
-                                                                Width="22"
-                                                                Height="22"
-                                                                CornerRadius="4"
-                                                                BorderBrush="{StaticResource CardBorder}"
-                                                                BorderThickness="1" />
-                                                        <TextBlock Margin="10,0,0,0"
-                                                           VerticalAlignment="Center"
-                                                           Text="Choose background color" />
-                                                    </StackPanel>
-                                                </Button>
-
-                                                <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" Text="Text color" Style="{StaticResource FieldLabel}" />
-                                                <Button Grid.Row="4"
-                                                        Grid.Column="1"
-                                                        Margin="0,6"
-                                                        HorizontalAlignment="Left"
-                                                        Click="PickTextColorButton_OnClick">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <Border x:Name="OverlayTextColorSwatch"
-                                                                Width="22"
-                                                                Height="22"
-                                                                CornerRadius="4"
-                                                                BorderBrush="{StaticResource CardBorder}"
-                                                                BorderThickness="1" />
-                                                        <TextBlock Margin="10,0,0,0"
-                                                                   VerticalAlignment="Center"
-                                                                   Text="Choose text color" />
-                                                    </StackPanel>
-                                                </Button>
-
-                                                <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,8,16,8" Text="Font size" Style="{StaticResource FieldLabel}" />
-                                                <Grid Grid.Row="5" Grid.Column="1" Margin="0,6">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBox x:Name="OverlayFontSizeTextBox"
-                                                             Grid.Column="0"
-                                                             TextChanged="OverlayPropertyTextBox_OnTextChanged" />
-                                                    <Grid Grid.Column="1" Width="60" Margin="8,0,0,0">
-                                                        <Grid.RowDefinitions>
-                                                            <RowDefinition Height="*" />
-                                                            <RowDefinition Height="*" />
-                                                        </Grid.RowDefinitions>
-                                                        <RepeatButton Grid.Row="0"
-                                                                      Content="&#x25B2;"
-                                                                      FontSize="8"
-                                                                      Click="FontSizeUpButton_OnClick"
-                                                                      Delay="250"
-                                                                      Interval="50"
-                                                                      IsTabStop="False" />
-                                                        <RepeatButton Grid.Row="1"
-                                                                      Content="&#x25BC;"
-                                                                      FontSize="8"
-                                                                      Click="FontSizeDownButton_OnClick"
-                                                                      Delay="250"
-                                                                      Interval="50"
-                                                                      IsTabStop="False" />
-                                                    </Grid>
-                                                </Grid>
-
-                                                <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,16,8" Text="Outline color" Style="{StaticResource FieldLabel}" />
-                                                <Button Grid.Row="6"
-                                                        Grid.Column="1"
-                                                        Margin="0,6"
-                                                        HorizontalAlignment="Left"
-                                                        Click="PickOutlineColorButton_OnClick">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <Border x:Name="OverlayOutlineColorSwatch"
-                                                                Width="22"
-                                                                Height="22"
-                                                                CornerRadius="4"
-                                                                BorderBrush="{StaticResource CardBorder}"
-                                                                BorderThickness="1" />
-                                                        <TextBlock Margin="10,0,0,0"
-                                                                   VerticalAlignment="Center"
-                                                                   Text="Choose outline color" />
-                                                    </StackPanel>
-                                                </Button>
-
-                                                <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,16,8" Text="Outline thickness" Style="{StaticResource FieldLabel}" />
-                                                <Grid Grid.Row="7" Grid.Column="1" Margin="0,6">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBox x:Name="OverlayOutlineThicknessTextBox"
-                                                             Grid.Column="0"
-                                                             TextChanged="OverlayPropertyTextBox_OnTextChanged" />
-                                                    <Grid Grid.Column="1" Width="60" Margin="8,0,0,0">
-                                                        <Grid.RowDefinitions>
-                                                            <RowDefinition Height="*" />
-                                                            <RowDefinition Height="*" />
-                                                        </Grid.RowDefinitions>
-                                                        <RepeatButton Grid.Row="0"
-                                                                      Content="&#x25B2;"
-                                                                      FontSize="8"
-                                                                      Click="ThicknessUpButton_OnClick"
-                                                                      Delay="250"
-                                                                      Interval="50"
-                                                                      IsTabStop="False" />
-                                                        <RepeatButton Grid.Row="1"
-                                                                      Content="&#x25BC;"
-                                                                      FontSize="8"
-                                                                      Click="ThicknessDownButton_OnClick"
-                                                                      Delay="250"
-                                                                      Interval="50"
-                                                                      IsTabStop="False" />
-                                                    </Grid>
-                                                </Grid>
-                                            </Grid>
-
-                                            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                                                <Button Width="130" Content="Adjust Overlay" Click="AdjustOverlayButton_OnClick" />
-                                                <Button Width="120" Margin="10,0,0,0" Content="Lock Overlay" Click="LockOverlayButton_OnClick" />
-                                                <Button Width="130" Margin="10,0,0,0" Content="Reset Position" Click="ResetOverlayPositionButton_OnClick" />
-                                                <Button Width="120" Margin="10,0,0,0" Content="Test Overlay" Click="OverlayTestButton_OnClick" />
-                                            </StackPanel>
-
-                                            <StackPanel Visibility="Collapsed">
-                                                <TextBox x:Name="OverlayBgColorTextBox"
-                                                         TextChanged="OverlayPropertyTextBox_OnTextChanged" />
-                                                <TextBox x:Name="OverlayTextColorTextBox"
-                                                         TextChanged="OverlayPropertyTextBox_OnTextChanged" />
-                                                <TextBox x:Name="OverlayOutlineColorTextBox"
-                                                         TextChanged="OverlayPropertyTextBox_OnTextChanged" />
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
-                            </ScrollViewer>
-                        </TabItem>
-
-                        <TabItem Header="AI Behavior">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel Margin="16">
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Text="Live Session Behavior"
-                                                       Style="{StaticResource CardHeader}" />
-                                            <CheckBox x:Name="EnableAffectiveDialogCheckBox"
-                                                      Content="Enable emotion-aware responses" />
-                                            <TextBlock Margin="30,2,0,8"
-                                                       Style="{StaticResource FieldDescription}"
-                                                       Text="Gemini adjusts how it responds based on the emotional tone it hears." />
-
-                                            <CheckBox x:Name="EnableProactiveAudioCheckBox"
-                                                      Content="Enable proactive audio" />
-                                            <TextBlock Margin="30,2,0,8"
-                                                       Style="{StaticResource FieldDescription}"
-                                                       Text="Gemini can choose when to speak up and when to ignore irrelevant background input." />
-
-                                            <CheckBox x:Name="EnableContextCompressionCheckBox"
-                                                      Content="Enable context window compression" />
-                                            <TextBlock Margin="30,2,0,12"
-                                                       Style="{StaticResource FieldDescription}"
-                                                       Text="Compresses older context so long sessions can fit inside the model's context window." />
-
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="180" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-
-                                                <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" Text="Trigger tokens" Style="{StaticResource FieldLabel}" />
-                                                <TextBox x:Name="ContextCompressionTriggerTokensTextBox" Grid.Row="0" Grid.Column="1" Margin="0,6" />
-
-                                                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" Text="Target tokens" Style="{StaticResource FieldLabel}" />
-                                                <TextBox x:Name="ContextCompressionTargetTokensTextBox" Grid.Row="1" Grid.Column="1" Margin="0,6" />
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Text="Thinking"
-                                                       Style="{StaticResource CardHeader}" />
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="180" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-
-                                                <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" Text="Thinking mode" Style="{StaticResource FieldLabel}" />
-                                                <ComboBox x:Name="ThinkingModeComboBox"
-                                                          Grid.Row="0"
-                                                          Grid.Column="1"
-                                                          Margin="0,6"
-                                                          SelectionChanged="ThinkingModeComboBox_OnSelectionChanged" />
-
-                                                <TextBlock x:Name="ThinkingModeDescriptionTextBlock"
-                                                           Grid.Row="1"
-                                                           Grid.Column="1"
-                                                           Margin="0,2,0,0"
-                                                           Style="{StaticResource FieldDescription}"
-                                                           Text="Use the model default thinking behavior." />
-
-                                                <StackPanel x:Name="ThinkingCustomOptionsPanel"
-                                                            Grid.Row="2"
-                                                            Grid.Column="0"
-                                                            Grid.ColumnSpan="2"
-                                                            Margin="0,12,0,0">
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="180" />
-                                                            <ColumnDefinition Width="*" />
-                                                        </Grid.ColumnDefinitions>
-                                                        <Grid.RowDefinitions>
-                                                            <RowDefinition Height="Auto" />
-                                                            <RowDefinition Height="Auto" />
-                                                        </Grid.RowDefinitions>
-
-                                                        <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" Text="Thinking budget" Style="{StaticResource FieldLabel}" />
-                                                        <TextBox x:Name="ThinkingBudgetTextBox" Grid.Row="0" Grid.Column="1" Margin="0,6" />
-
-                                                        <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" Text="Thinking level" Style="{StaticResource FieldLabel}" />
-                                                        <ComboBox x:Name="ThinkingLevelComboBox" Grid.Row="1" Grid.Column="1" Margin="0,6" />
-                                                    </Grid>
-
-                                                    <CheckBox x:Name="IncludeThoughtsCheckBox"
-                                                              Margin="0,12,0,0"
-                                                              Content="Request thought summaries" />
-                                                    <TextBlock Margin="30,2,0,0"
-                                                               Style="{StaticResource FieldDescription}"
-                                                               Text="These are metadata summaries from the model. The app keeps them out of the overlay and user-facing logs." />
-                                                </StackPanel>
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
-                            </ScrollViewer>
-                        </TabItem>
-
-                        <TabItem Header="General">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel Margin="16">
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Text="General"
-                                                       Style="{StaticResource CardHeader}" />
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="180" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-
-                                                <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" Text="App theme" Style="{StaticResource FieldLabel}" />
-                                                <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,6">
-                                                    <ComboBox x:Name="AppThemeComboBox" />
-                                                    <TextBlock Margin="0,8,0,0"
-                                                               Style="{StaticResource FieldDescription}"
-                                                               Text="System uses standard Windows styling. Theme changes are applied the next time you open the app." />
-                                                </StackPanel>
-
-                                                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" Text="Startup" Style="{StaticResource FieldLabel}" />
-                                                <CheckBox x:Name="AutoStartSessionCheckBox"
-                                                          Grid.Row="1"
-                                                          Grid.Column="1"
-                                                          Margin="0,6"
-                                                          Content="Auto-start live session on launch" />
-
-                                                <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" Text="Tray behavior" Style="{StaticResource FieldLabel}" />
-                                                <CheckBox x:Name="StartMinimizedCheckBox"
-                                                          Grid.Row="2"
-                                                          Grid.Column="1"
-                                                          Margin="0,6"
-                                                          Content="Start minimized to tray" />
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
-                            </ScrollViewer>
-                        </TabItem>
-                    </TabControl>
-                </Grid>
-            </Grid>
-
-            <Grid x:Name="ConversationPanel" Visibility="Collapsed">
-                <Grid Margin="32">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <DockPanel Margin="0,0,0,20">
-                        <TextBlock Text="Conversation"
+                        <TextBlock Text="History"
                                    Style="{StaticResource SectionHeader}" />
                         <StackPanel DockPanel.Dock="Right"
                                     Orientation="Horizontal"
@@ -807,24 +238,20 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
+                        <!-- Sessions list -->
                         <Border Grid.Column="0"
                                 Style="{StaticResource CardStyle}"
                                 Padding="12">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Text="Saved Sessions"
+                                <TextBlock Text="Sessions"
                                            Style="{StaticResource CardHeader}" />
-                                <TextBlock Grid.Row="1"
-                                           Margin="0,8,0,12"
-                                           Style="{StaticResource FieldDescription}"
-                                           Text="Each live run is saved automatically. If the app crashes, the unfinished session will show up here as Interrupted." />
 
-                                <Grid Grid.Row="2">
+                                <Grid Grid.Row="1">
                                     <ListBox x:Name="ConversationSessionsListBox"
                                              Background="Transparent"
                                              BorderThickness="0"
@@ -863,6 +290,7 @@
                             </Grid>
                         </Border>
 
+                        <!-- Conversation detail -->
                         <Border Grid.Column="2"
                                 Style="{StaticResource CardStyle}"
                                 Padding="8">
@@ -889,23 +317,23 @@
                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
-                                                <Border Margin="4"
-                                                        Padding="16"
-                                                        Background="{StaticResource CardBackground}"
+                                                <Border Margin="4,3"
+                                                        Padding="14,10"
                                                         CornerRadius="10"
                                                         BorderBrush="{StaticResource CardBorder}"
-                                                        BorderThickness="1">
+                                                        BorderThickness="0">
                                                     <StackPanel>
                                                         <DockPanel>
                                                             <TextBlock FontWeight="SemiBold"
+                                                                       FontSize="12"
                                                                        Foreground="{StaticResource AccentPrimary}"
                                                                        Text="{Binding Role}" />
-                                                            <TextBlock Margin="10,0,0,0"
-                                                                       FontSize="12"
+                                                            <TextBlock Margin="8,0,0,0"
+                                                                       FontSize="11"
                                                                        Foreground="{StaticResource TextMuted}"
                                                                        Text="{Binding DisplayTimestamp}" />
                                                         </DockPanel>
-                                                        <TextBlock Margin="0,8,0,0"
+                                                        <TextBlock Margin="0,6,0,0"
                                                                    TextWrapping="Wrap"
                                                                    Foreground="{StaticResource TextPrimary}"
                                                                    Text="{Binding Text}" />
@@ -923,9 +351,727 @@
                                 </Grid>
                             </Grid>
                         </Border>
-                        </Grid>
                     </Grid>
                 </Grid>
             </Grid>
+
+            <!-- ===== CONNECTION PANEL ===== -->
+            <Grid x:Name="ConnectionPanel" Visibility="Collapsed">
+                <Grid Margin="32">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Margin="0,0,0,20">
+                        <TextBlock Text="Connection"
+                                   Style="{StaticResource SectionHeader}" />
+                        <Button DockPanel.Dock="Right"
+                                Width="150"
+                                Style="{StaticResource AccentButton}"
+                                Content="Save Settings"
+                                Click="SaveButton_OnClick" />
+                    </DockPanel>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Connection &amp; Model"
+                                               Style="{StaticResource CardHeader}" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="180" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" Text="Gemini API key" Style="{StaticResource FieldLabel}" />
+                                        <PasswordBox x:Name="ApiKeyPasswordBox" Grid.Row="0" Grid.Column="1" Margin="0,6" />
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" Text="Live model" Style="{StaticResource FieldLabel}" />
+                                        <ComboBox x:Name="LiveModelComboBox" Grid.Row="1" Grid.Column="1" Margin="0,6" />
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" Text="Media resolution" Style="{StaticResource FieldLabel}" />
+                                        <ComboBox x:Name="MediaResolutionComboBox" Grid.Row="2" Grid.Column="1" Margin="0,6" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="System Prompt"
+                                               Style="{StaticResource CardHeader}" />
+                                    <TextBlock Style="{StaticResource FieldDescription}"
+                                               Text="This is the standing instruction Gemini uses throughout the live session." />
+                                    <TextBox x:Name="SystemPromptTextBox"
+                                             Margin="0,12,0,0"
+                                             Style="{StaticResource MultiLineTextBox}" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+
+            <!-- ===== AUDIO & CAPTURE PANEL ===== -->
+            <Grid x:Name="AudioCapturePanel" Visibility="Collapsed">
+                <Grid Margin="32">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Margin="0,0,0,20">
+                        <TextBlock Text="Audio &amp; Capture"
+                                   Style="{StaticResource SectionHeader}" />
+                        <Button DockPanel.Dock="Right"
+                                Width="150"
+                                Style="{StaticResource AccentButton}"
+                                Content="Save Settings"
+                                Click="SaveButton_OnClick" />
+                    </DockPanel>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Voice &amp; Audio"
+                                               Style="{StaticResource CardHeader}" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="180" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" Text="Voice" Style="{StaticResource FieldLabel}" />
+                                        <Grid Grid.Row="0" Grid.Column="1" Margin="0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox x:Name="VoiceComboBox"
+                                                      Grid.Column="0"
+                                                      DisplayMemberPath="DisplayName"
+                                                      SelectedValuePath="Name" />
+                                            <Button Grid.Column="1"
+                                                    Width="90"
+                                                    Margin="10,0,0,0"
+                                                    Content="Preview"
+                                                    Click="PreviewVoiceButton_OnClick" />
+                                            <Button Grid.Column="2"
+                                                    Width="70"
+                                                    Margin="10,0,0,0"
+                                                    Content="Stop"
+                                                    Click="StopPreviewButton_OnClick" />
+                                        </Grid>
+
+                                        <TextBlock x:Name="VoicePreviewStatusTextBlock"
+                                                   Grid.Row="1"
+                                                   Grid.Column="1"
+                                                   Margin="0,0,0,12"
+                                                   Style="{StaticResource FieldDescription}"
+                                                   Text="Preview a local WAV sample for the selected voice." />
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" Text="Microphone" Style="{StaticResource FieldLabel}" />
+                                        <ComboBox x:Name="MicrophoneComboBox"
+                                                  Grid.Row="2"
+                                                  Grid.Column="1"
+                                                  Margin="0,6"
+                                                  SelectionChanged="MicrophoneComboBox_OnSelectionChanged"
+                                                  DisplayMemberPath="DisplayName"
+                                                  SelectedValuePath="DeviceName" />
+
+                                        <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,16,8" Text="Mic preview" Style="{StaticResource FieldLabel}" />
+                                        <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,6">
+                                            <ProgressBar x:Name="MicrophoneLevelProgressBar"
+                                                         Height="12"
+                                                         Minimum="0"
+                                                         Maximum="100"
+                                                         Value="0" />
+                                            <TextBlock x:Name="MicrophonePreviewStatusTextBlock"
+                                                       Margin="0,8,0,0"
+                                                       Style="{StaticResource FieldDescription}"
+                                                       Text="Select a microphone to preview its live level." />
+                                        </StackPanel>
+
+                                        <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" Text="Mic volume" Style="{StaticResource FieldLabel}" />
+                                        <Grid Grid.Row="4" Grid.Column="1" Margin="0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="60" />
+                                            </Grid.ColumnDefinitions>
+                                            <Slider x:Name="MicrophoneGainSlider"
+                                                    Grid.Column="0"
+                                                    Minimum="0.0"
+                                                    Maximum="3.0"
+                                                    TickFrequency="0.1"
+                                                    IsSnapToTickEnabled="False"
+                                                    ValueChanged="MicrophoneGainSlider_OnValueChanged" />
+                                            <TextBlock x:Name="MicrophoneGainValueTextBlock"
+                                                       Grid.Column="1"
+                                                       Margin="12,0,0,0"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Right"
+                                                       Foreground="{StaticResource TextPrimary}"
+                                                       Text="100%" />
+                                        </Grid>
+                                    </Grid>
+
+                                    <Button Width="170"
+                                            Margin="0,12,0,0"
+                                            HorizontalAlignment="Left"
+                                            Content="Refresh Audio Sources"
+                                            Click="RefreshSourcesButton_OnClick" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Screen Capture"
+                                               Style="{StaticResource CardHeader}" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="180" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" Text="Screen source" Style="{StaticResource FieldLabel}" />
+                                        <ComboBox x:Name="ScreenSourceComboBox"
+                                                  Grid.Row="0"
+                                                  Grid.Column="1"
+                                                  Margin="0,6"
+                                                  SelectionChanged="ScreenSourceComboBox_OnSelectionChanged"
+                                                  DisplayMemberPath="DisplayName"
+                                                  SelectedValuePath="DeviceName" />
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="Screen preview" Style="{StaticResource FieldLabel}" />
+                                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,6">
+                                            <Border Height="220"
+                                                    BorderBrush="{StaticResource CardBorder}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="10"
+                                                    Background="{StaticResource CardBackground}">
+                                                <Grid>
+                                                    <Image x:Name="ScreenPreviewImage"
+                                                           Stretch="Uniform"
+                                                           SnapsToDevicePixels="True" />
+                                                    <TextBlock x:Name="ScreenPreviewPlaceholderTextBlock"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="{StaticResource TextMuted}"
+                                                               Text="Loading screen preview..." />
+                                                </Grid>
+                                            </Border>
+                                            <TextBlock x:Name="ScreenPreviewStatusTextBlock"
+                                                       Margin="0,8,0,0"
+                                                       Style="{StaticResource FieldDescription}"
+                                                       Text="Live preview of the selected screen." />
+                                        </StackPanel>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" VerticalAlignment="Top" Text="Capture interval (ms)" Style="{StaticResource FieldLabel}" />
+                                        <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,6">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox x:Name="ScreenIntervalTextBox"
+                                                         Grid.Column="0"
+                                                         MaxLength="4"
+                                                         TextChanged="ScreenIntervalTextBox_OnTextChanged"
+                                                         PreviewTextInput="ScreenIntervalTextBox_OnPreviewTextInput" />
+                                                <Grid Grid.Column="1" Width="60" Margin="8,0,0,0">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="*" />
+                                                        <RowDefinition Height="*" />
+                                                    </Grid.RowDefinitions>
+                                                    <RepeatButton Grid.Row="0"
+                                                                  Content="&#x25B2;"
+                                                                  FontSize="8"
+                                                                  Click="ScreenIntervalUpButton_OnClick"
+                                                                  Delay="250"
+                                                                  Interval="70"
+                                                                  IsTabStop="False" />
+                                                    <RepeatButton Grid.Row="1"
+                                                                  Content="&#x25BC;"
+                                                                  FontSize="8"
+                                                                  Click="ScreenIntervalDownButton_OnClick"
+                                                                  Delay="250"
+                                                                  Interval="70"
+                                                                  IsTabStop="False" />
+                                                </Grid>
+                                            </Grid>
+                                            <TextBlock Margin="0,8,0,0"
+                                                       Style="{StaticResource FieldDescription}"
+                                                       Text="Controls both the Gemini screen-frame send rate and this local preview refresh rate. Lower values update faster but use more CPU and network." />
+                                        </StackPanel>
+
+                                        <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,16,8" Text="Frame streaming" Style="{StaticResource FieldLabel}" />
+                                        <CheckBox x:Name="StreamScreenFramesCheckBox"
+                                                  Grid.Row="3"
+                                                  Grid.Column="1"
+                                                  Margin="0,6"
+                                                  Content="Stream screen frames continuously" />
+
+                                        <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" Text="Source refresh" Style="{StaticResource FieldLabel}" />
+                                        <Button Grid.Row="4"
+                                                Grid.Column="1"
+                                                Width="180"
+                                                Margin="0,6"
+                                                HorizontalAlignment="Left"
+                                                Content="Refresh Screen Sources"
+                                                Click="RefreshSourcesButton_OnClick" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+
+            <!-- ===== OVERLAY PANEL ===== -->
+            <Grid x:Name="OverlayPanel" Visibility="Collapsed">
+                <Grid Margin="32">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Margin="0,0,0,20">
+                        <TextBlock Text="Overlay"
+                                   Style="{StaticResource SectionHeader}" />
+                        <Button DockPanel.Dock="Right"
+                                Width="150"
+                                Style="{StaticResource AccentButton}"
+                                Content="Save Settings"
+                                Click="SaveButton_OnClick" />
+                    </DockPanel>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Overlay Appearance"
+                                               Style="{StaticResource CardHeader}" />
+                                    <TextBlock Margin="0,8,0,12"
+                                               Style="{StaticResource FieldDescription}"
+                                               Text="Overlay works best with windowed or borderless fullscreen games. Windows may keep true exclusive fullscreen games above desktop overlays, so the overlay might not appear there." />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="180" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" Text="Display seconds" Style="{StaticResource FieldLabel}" />
+                                        <TextBox x:Name="OverlaySecondsTextBox" Grid.Row="0" Grid.Column="1" Margin="0,6" />
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" Text="Text opacity" Style="{StaticResource FieldLabel}" />
+                                        <Grid Grid.Row="1" Grid.Column="1" Margin="0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="60" />
+                                            </Grid.ColumnDefinitions>
+                                            <Slider x:Name="OverlayOpacitySlider"
+                                                    Grid.Column="0"
+                                                    Minimum="0.0"
+                                                    Maximum="1.0"
+                                                    TickFrequency="0.05"
+                                                    IsSnapToTickEnabled="False"
+                                                    ValueChanged="OverlayOpacitySlider_OnValueChanged" />
+                                            <TextBlock x:Name="OverlayOpacityValueTextBlock"
+                                                       Grid.Column="1"
+                                                       Margin="12,0,0,0"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Right"
+                                                       Foreground="{StaticResource TextPrimary}"
+                                                       Text="0.94" />
+                                        </Grid>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" Text="Background opacity" Style="{StaticResource FieldLabel}" />
+                                        <Grid Grid.Row="2" Grid.Column="1" Margin="0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="60" />
+                                            </Grid.ColumnDefinitions>
+                                            <Slider x:Name="OverlayBgOpacitySlider"
+                                                    Grid.Column="0"
+                                                    Minimum="0.0"
+                                                    Maximum="1.0"
+                                                    TickFrequency="0.05"
+                                                    IsSnapToTickEnabled="False"
+                                                    ValueChanged="OverlayBgOpacitySlider_OnValueChanged" />
+                                            <TextBlock x:Name="OverlayBgOpacityValueTextBlock"
+                                                       Grid.Column="1"
+                                                       Margin="12,0,0,0"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Right"
+                                                       Foreground="{StaticResource TextPrimary}"
+                                                       Text="0.85" />
+                                        </Grid>
+
+                                        <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,16,8" Text="Background color" Style="{StaticResource FieldLabel}" />
+                                        <Button Grid.Row="3"
+                                                Grid.Column="1"
+                                                Margin="0,6"
+                                                HorizontalAlignment="Left"
+                                                Click="PickBgColorButton_OnClick">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border x:Name="OverlayBgColorSwatch"
+                                                        Width="22"
+                                                        Height="22"
+                                                        CornerRadius="4"
+                                                        BorderBrush="{StaticResource CardBorder}"
+                                                        BorderThickness="1" />
+                                                <TextBlock Margin="10,0,0,0"
+                                                           VerticalAlignment="Center"
+                                                           Text="Choose background color" />
+                                            </StackPanel>
+                                        </Button>
+
+                                        <TextBlock Grid.Row="4" Grid.Column="0" Margin="0,8,16,8" Text="Text color" Style="{StaticResource FieldLabel}" />
+                                        <Button Grid.Row="4"
+                                                Grid.Column="1"
+                                                Margin="0,6"
+                                                HorizontalAlignment="Left"
+                                                Click="PickTextColorButton_OnClick">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border x:Name="OverlayTextColorSwatch"
+                                                        Width="22"
+                                                        Height="22"
+                                                        CornerRadius="4"
+                                                        BorderBrush="{StaticResource CardBorder}"
+                                                        BorderThickness="1" />
+                                                <TextBlock Margin="10,0,0,0"
+                                                           VerticalAlignment="Center"
+                                                           Text="Choose text color" />
+                                            </StackPanel>
+                                        </Button>
+
+                                        <TextBlock Grid.Row="5" Grid.Column="0" Margin="0,8,16,8" Text="Font size" Style="{StaticResource FieldLabel}" />
+                                        <Grid Grid.Row="5" Grid.Column="1" Margin="0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="OverlayFontSizeTextBox"
+                                                     Grid.Column="0"
+                                                     TextChanged="OverlayPropertyTextBox_OnTextChanged" />
+                                            <Grid Grid.Column="1" Width="60" Margin="8,0,0,0">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="*" />
+                                                    <RowDefinition Height="*" />
+                                                </Grid.RowDefinitions>
+                                                <RepeatButton Grid.Row="0"
+                                                              Content="&#x25B2;"
+                                                              FontSize="8"
+                                                              Click="FontSizeUpButton_OnClick"
+                                                              Delay="250"
+                                                              Interval="50"
+                                                              IsTabStop="False" />
+                                                <RepeatButton Grid.Row="1"
+                                                              Content="&#x25BC;"
+                                                              FontSize="8"
+                                                              Click="FontSizeDownButton_OnClick"
+                                                              Delay="250"
+                                                              Interval="50"
+                                                              IsTabStop="False" />
+                                            </Grid>
+                                        </Grid>
+
+                                        <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,8,16,8" Text="Outline color" Style="{StaticResource FieldLabel}" />
+                                        <Button Grid.Row="6"
+                                                Grid.Column="1"
+                                                Margin="0,6"
+                                                HorizontalAlignment="Left"
+                                                Click="PickOutlineColorButton_OnClick">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border x:Name="OverlayOutlineColorSwatch"
+                                                        Width="22"
+                                                        Height="22"
+                                                        CornerRadius="4"
+                                                        BorderBrush="{StaticResource CardBorder}"
+                                                        BorderThickness="1" />
+                                                <TextBlock Margin="10,0,0,0"
+                                                           VerticalAlignment="Center"
+                                                           Text="Choose outline color" />
+                                            </StackPanel>
+                                        </Button>
+
+                                        <TextBlock Grid.Row="7" Grid.Column="0" Margin="0,8,16,8" Text="Outline thickness" Style="{StaticResource FieldLabel}" />
+                                        <Grid Grid.Row="7" Grid.Column="1" Margin="0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="OverlayOutlineThicknessTextBox"
+                                                     Grid.Column="0"
+                                                     TextChanged="OverlayPropertyTextBox_OnTextChanged" />
+                                            <Grid Grid.Column="1" Width="60" Margin="8,0,0,0">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="*" />
+                                                    <RowDefinition Height="*" />
+                                                </Grid.RowDefinitions>
+                                                <RepeatButton Grid.Row="0"
+                                                              Content="&#x25B2;"
+                                                              FontSize="8"
+                                                              Click="ThicknessUpButton_OnClick"
+                                                              Delay="250"
+                                                              Interval="50"
+                                                              IsTabStop="False" />
+                                                <RepeatButton Grid.Row="1"
+                                                              Content="&#x25BC;"
+                                                              FontSize="8"
+                                                              Click="ThicknessDownButton_OnClick"
+                                                              Delay="250"
+                                                              Interval="50"
+                                                              IsTabStop="False" />
+                                            </Grid>
+                                        </Grid>
+                                    </Grid>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                        <Button Width="130" Content="Adjust Overlay" Click="AdjustOverlayButton_OnClick" />
+                                        <Button Width="120" Margin="10,0,0,0" Content="Lock Overlay" Click="LockOverlayButton_OnClick" />
+                                        <Button Width="130" Margin="10,0,0,0" Content="Reset Position" Click="ResetOverlayPositionButton_OnClick" />
+                                        <Button Width="120" Margin="10,0,0,0" Content="Test Overlay" Click="OverlayTestButton_OnClick" />
+                                    </StackPanel>
+
+                                    <StackPanel Visibility="Collapsed">
+                                        <TextBox x:Name="OverlayBgColorTextBox"
+                                                 TextChanged="OverlayPropertyTextBox_OnTextChanged" />
+                                        <TextBox x:Name="OverlayTextColorTextBox"
+                                                 TextChanged="OverlayPropertyTextBox_OnTextChanged" />
+                                        <TextBox x:Name="OverlayOutlineColorTextBox"
+                                                 TextChanged="OverlayPropertyTextBox_OnTextChanged" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+
+            <!-- ===== AI BEHAVIOR PANEL ===== -->
+            <Grid x:Name="AiBehaviorPanel" Visibility="Collapsed">
+                <Grid Margin="32">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Margin="0,0,0,20">
+                        <TextBlock Text="AI Behavior"
+                                   Style="{StaticResource SectionHeader}" />
+                        <Button DockPanel.Dock="Right"
+                                Width="150"
+                                Style="{StaticResource AccentButton}"
+                                Content="Save Settings"
+                                Click="SaveButton_OnClick" />
+                    </DockPanel>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Live Session Behavior"
+                                               Style="{StaticResource CardHeader}" />
+                                    <CheckBox x:Name="EnableAffectiveDialogCheckBox"
+                                              Content="Enable emotion-aware responses" />
+                                    <TextBlock Margin="30,2,0,8"
+                                               Style="{StaticResource FieldDescription}"
+                                               Text="Gemini adjusts how it responds based on the emotional tone it hears." />
+
+                                    <CheckBox x:Name="EnableProactiveAudioCheckBox"
+                                              Content="Enable proactive audio" />
+                                    <TextBlock Margin="30,2,0,8"
+                                               Style="{StaticResource FieldDescription}"
+                                               Text="Gemini can choose when to speak up and when to ignore irrelevant background input." />
+
+                                    <CheckBox x:Name="EnableContextCompressionCheckBox"
+                                              Content="Enable context window compression" />
+                                    <TextBlock Margin="30,2,0,12"
+                                               Style="{StaticResource FieldDescription}"
+                                               Text="Compresses older context so long sessions can fit inside the model's context window." />
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="180" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" Text="Trigger tokens" Style="{StaticResource FieldLabel}" />
+                                        <TextBox x:Name="ContextCompressionTriggerTokensTextBox" Grid.Row="0" Grid.Column="1" Margin="0,6" />
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" Text="Target tokens" Style="{StaticResource FieldLabel}" />
+                                        <TextBox x:Name="ContextCompressionTargetTokensTextBox" Grid.Row="1" Grid.Column="1" Margin="0,6" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Thinking"
+                                               Style="{StaticResource CardHeader}" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="180" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" Text="Thinking mode" Style="{StaticResource FieldLabel}" />
+                                        <ComboBox x:Name="ThinkingModeComboBox"
+                                                  Grid.Row="0"
+                                                  Grid.Column="1"
+                                                  Margin="0,6"
+                                                  SelectionChanged="ThinkingModeComboBox_OnSelectionChanged" />
+
+                                        <TextBlock x:Name="ThinkingModeDescriptionTextBlock"
+                                                   Grid.Row="1"
+                                                   Grid.Column="1"
+                                                   Margin="0,2,0,0"
+                                                   Style="{StaticResource FieldDescription}"
+                                                   Text="Use the model default thinking behavior." />
+
+                                        <StackPanel x:Name="ThinkingCustomOptionsPanel"
+                                                    Grid.Row="2"
+                                                    Grid.Column="0"
+                                                    Grid.ColumnSpan="2"
+                                                    Margin="0,12,0,0">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="180" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+
+                                                <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" Text="Thinking budget" Style="{StaticResource FieldLabel}" />
+                                                <TextBox x:Name="ThinkingBudgetTextBox" Grid.Row="0" Grid.Column="1" Margin="0,6" />
+
+                                                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" Text="Thinking level" Style="{StaticResource FieldLabel}" />
+                                                <ComboBox x:Name="ThinkingLevelComboBox" Grid.Row="1" Grid.Column="1" Margin="0,6" />
+                                            </Grid>
+
+                                            <CheckBox x:Name="IncludeThoughtsCheckBox"
+                                                      Margin="0,12,0,0"
+                                                      Content="Request thought summaries" />
+                                            <TextBlock Margin="30,2,0,0"
+                                                       Style="{StaticResource FieldDescription}"
+                                                       Text="These are metadata summaries from the model. The app keeps them out of the overlay and user-facing logs." />
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+
+            <!-- ===== GENERAL PANEL ===== -->
+            <Grid x:Name="GeneralPanel" Visibility="Collapsed">
+                <Grid Margin="32">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Margin="0,0,0,20">
+                        <TextBlock Text="General"
+                                   Style="{StaticResource SectionHeader}" />
+                        <Button DockPanel.Dock="Right"
+                                Width="150"
+                                Style="{StaticResource AccentButton}"
+                                Content="Save Settings"
+                                Click="SaveButton_OnClick" />
+                    </DockPanel>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="General"
+                                               Style="{StaticResource CardHeader}" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="180" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" Text="App theme" Style="{StaticResource FieldLabel}" />
+                                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,6">
+                                            <ComboBox x:Name="AppThemeComboBox" />
+                                            <TextBlock Margin="0,8,0,0"
+                                                       Style="{StaticResource FieldDescription}"
+                                                       Text="System uses standard Windows styling. Theme changes are applied the next time you open the app." />
+                                        </StackPanel>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" Text="Startup" Style="{StaticResource FieldLabel}" />
+                                        <CheckBox x:Name="AutoStartSessionCheckBox"
+                                                  Grid.Row="1"
+                                                  Grid.Column="1"
+                                                  Margin="0,6"
+                                                  Content="Auto-start live session on launch" />
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,16,8" Text="Tray behavior" Style="{StaticResource FieldLabel}" />
+                                        <CheckBox x:Name="StartMinimizedCheckBox"
+                                                  Grid.Row="2"
+                                                  Grid.Column="1"
+                                                  Margin="0,6"
+                                                  Content="Start minimized to tray" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+
         </Grid>
+    </Grid>
 </Window>
