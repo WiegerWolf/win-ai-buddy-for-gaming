@@ -35,7 +35,7 @@
                 <TextBlock DockPanel.Dock="Bottom"
                            Margin="20,0,20,16"
                            Foreground="{StaticResource TextMuted}"
-                           Text="v1.3" />
+                           Text="v1.4" />
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel>
