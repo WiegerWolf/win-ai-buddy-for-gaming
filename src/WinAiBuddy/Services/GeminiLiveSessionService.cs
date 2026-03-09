@@ -199,6 +199,13 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
                     }
                 }
             },
+            Tools = new List<Tool>
+            {
+                new()
+                {
+                    GoogleSearch = new GoogleSearch()
+                }
+            },
             InputAudioTranscription = new AudioTranscriptionConfig(),
             OutputAudioTranscription = new AudioTranscriptionConfig()
         };
