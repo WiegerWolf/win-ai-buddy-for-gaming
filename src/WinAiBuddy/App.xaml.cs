@@ -12,11 +12,14 @@ public partial class App : Application
     private const string ThemeDictionaryPrefix = "Themes/";
     private NotifyIcon? _notifyIcon;
     private MainWindow? _mainWindow;
+    private SettingsService? _settingsService;
+    private ConversationSessionStore? _conversationSessionStore;
     private GameAssistantOrchestrator? _orchestrator;
     private GeminiLiveSessionService? _liveSessionService;
     private AudioRecordingService? _audioRecordingService;
     private SpeechPlaybackService? _speechPlaybackService;
     private DiagnosticsLogService? _diagnosticsLogService;
+    private OverlayService? _overlayService;
     private bool _isShuttingDown;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -36,35 +39,35 @@ public partial class App : Application
             "WinAiBuddy",
             "Logs");
 
-        var settingsService = new SettingsService(settingsPath);
-        settingsService.EnsureLoaded();
-        ApplyTheme(settingsService.Current.AppTheme);
+        _settingsService = new SettingsService(settingsPath);
+        _settingsService.EnsureLoaded();
+        ApplyTheme(_settingsService.Current.AppTheme);
         _diagnosticsLogService = new DiagnosticsLogService(diagnosticsLogsPath);
         RegisterGlobalExceptionLogging();
         _diagnosticsLogService.LogApp("App", "Application startup.");
-        var conversationSessionStore = new ConversationSessionStore(conversationSessionsPath);
-        conversationSessionStore.RecoverInterruptedSessions();
+        _conversationSessionStore = new ConversationSessionStore(conversationSessionsPath);
+        _conversationSessionStore.RecoverInterruptedSessions();
 
         var overlayWindow = new OverlayWindow();
-        var overlayService = new OverlayService(overlayWindow, settingsService);
+        _overlayService = new OverlayService(overlayWindow, _settingsService);
         var screenCaptureService = new ScreenCaptureService();
         _audioRecordingService = new AudioRecordingService();
         _liveSessionService = new GeminiLiveSessionService(_diagnosticsLogService);
         _speechPlaybackService = new SpeechPlaybackService();
 
         _orchestrator = new GameAssistantOrchestrator(
-            () => settingsService.Current,
+            () => _settingsService.Current,
             screenCaptureService,
             _audioRecordingService,
             _liveSessionService,
-            overlayService,
+            _overlayService,
             _speechPlaybackService);
 
-        _mainWindow = new MainWindow(settingsService, conversationSessionStore, _orchestrator, overlayService, _diagnosticsLogService);
-        _mainWindow.Icon = AppIconProvider.LoadWindowIcon();
+        _mainWindow = CreateMainWindow();
+        MainWindow = _mainWindow;
         _mainWindow.Show();
 
-        if (settingsService.Current.StartMinimizedToTray)
+        if (_settingsService.Current.StartMinimizedToTray)
         {
             _mainWindow.Hide();
         }
@@ -146,7 +149,7 @@ public partial class App : Application
         return ShutdownFromTrayAsync();
     }
 
-    public void ApplyTheme(string? themeName)
+    public void ApplyTheme(string? themeName, bool refreshMainWindow = false)
     {
         var dictionarySource = ResolveThemeDictionary(themeName);
         Resources.MergedDictionaries.Clear();
@@ -154,6 +157,11 @@ public partial class App : Application
         {
             Source = new Uri($"{ThemeDictionaryPrefix}{dictionarySource}", UriKind.Relative)
         });
+
+        if (refreshMainWindow)
+        {
+            RefreshMainWindow();
+        }
     }
 
     private async Task ShutdownFromTrayAsync()
@@ -226,5 +234,43 @@ public partial class App : Application
             "light" => "LightTheme.xaml",
             _ => "SystemTheme.xaml"
         };
+    }
+
+    private MainWindow CreateMainWindow()
+    {
+        var window = new MainWindow(
+            _settingsService!,
+            _conversationSessionStore!,
+            _orchestrator!,
+            _overlayService!,
+            _diagnosticsLogService!);
+        window.Icon = AppIconProvider.LoadWindowIcon();
+        return window;
+    }
+
+    private void RefreshMainWindow()
+    {
+        if (_mainWindow is null || _settingsService is null || _conversationSessionStore is null || _orchestrator is null || _overlayService is null || _diagnosticsLogService is null)
+        {
+            return;
+        }
+
+        var previousWindow = _mainWindow;
+        var snapshot = previousWindow.CaptureUiState();
+        var wasVisible = previousWindow.IsVisible;
+
+        var replacementWindow = CreateMainWindow();
+        replacementWindow.RestoreUiState(snapshot);
+        _mainWindow = replacementWindow;
+        MainWindow = replacementWindow;
+
+        if (wasVisible)
+        {
+            replacementWindow.Show();
+            replacementWindow.Activate();
+        }
+
+        previousWindow.PrepareForExit();
+        previousWindow.Close();
     }
 }

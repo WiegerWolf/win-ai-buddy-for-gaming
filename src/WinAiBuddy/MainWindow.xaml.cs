@@ -73,37 +73,10 @@ public partial class MainWindow : Window
         UpdateSessionButtons(isRunning: false);
         UpdateConversationButtons();
 
-        _orchestrator.StatusChanged += message => Dispatcher.Invoke(() => SetStatus(message));
-        _orchestrator.SessionStateChanged += isRunning => Dispatcher.Invoke(() =>
-        {
-            var wasRunning = _isSessionRunning;
-            _isSessionRunning = isRunning;
-            SessionStateTextBlock.Text = isRunning ? "Running" : "Stopped";
-            SessionStatusPill.Background = isRunning
-                ? new SolidColorBrush((WpfColor)System.Windows.Media.ColorConverter.ConvertFromString("#3300D4AA"))
-                : new SolidColorBrush((WpfColor)System.Windows.Media.ColorConverter.ConvertFromString("#22C62828"));
-            UpdateSessionButtons(isRunning);
-            UpdateConversationButtons();
-
-            if (isRunning && !wasRunning)
-            {
-                EnsureConversationSessionStarted();
-            }
-            else if (!isRunning && wasRunning)
-            {
-                FinalizeActiveConversationSession();
-            }
-        });
-        _orchestrator.InputTranscriptionChanged += text => Dispatcher.Invoke(() =>
-        {
-            InputTranscriptTextBlock.Text = string.IsNullOrWhiteSpace(text) ? "Nothing heard yet." : text;
-            LogConversationUpdate("You", text, isModel: false);
-        });
-        _orchestrator.OutputTranscriptionChanged += text => Dispatcher.Invoke(() =>
-        {
-            OutputTranscriptTextBlock.Text = string.IsNullOrWhiteSpace(text) ? "No model response yet." : text;
-            LogConversationUpdate("Gemini", text, isModel: true);
-        });
+        _orchestrator.StatusChanged += HandleOrchestratorStatusChanged;
+        _orchestrator.SessionStateChanged += HandleOrchestratorSessionStateChanged;
+        _orchestrator.InputTranscriptionChanged += HandleOrchestratorInputTranscriptionChanged;
+        _orchestrator.OutputTranscriptionChanged += HandleOrchestratorOutputTranscriptionChanged;
     }
 
     public async Task StartLiveIfConfiguredAsync()
@@ -125,6 +98,76 @@ public partial class MainWindow : Window
         WindowState = WindowState.Normal;
         Activate();
         ResumeCapturePreviews();
+    }
+
+    public MainWindowUiState CaptureUiState()
+    {
+        var restoreBounds = WindowState == WindowState.Normal
+            ? new Rect(Left, Top, Width, Height)
+            : RestoreBounds;
+        var entries = _conversationLogEntries
+            .Select(entry => new ConversationLogEntrySnapshot(entry.Timestamp, entry.Role, entry.Text))
+            .ToList();
+
+        return new MainWindowUiState(
+            restoreBounds.Left,
+            restoreBounds.Top,
+            restoreBounds.Width,
+            restoreBounds.Height,
+            WindowState == WindowState.Minimized ? WindowState.Normal : WindowState,
+            ReadSelectedPanelKey(),
+            StatusTextBlock.Text,
+            _isSessionRunning,
+            _activeConversationSessionId,
+            _selectedConversationSessionId,
+            InputTranscriptTextBlock.Text,
+            OutputTranscriptTextBlock.Text,
+            ConversationSessionHeaderTextBlock.Text,
+            ConversationSessionMetaTextBlock.Text,
+            entries);
+    }
+
+    public void RestoreUiState(MainWindowUiState state)
+    {
+        if (!double.IsNaN(state.Left) && !double.IsInfinity(state.Left))
+        {
+            Left = state.Left;
+        }
+
+        if (!double.IsNaN(state.Top) && !double.IsInfinity(state.Top))
+        {
+            Top = state.Top;
+        }
+
+        if (state.Width > 0 && !double.IsNaN(state.Width) && !double.IsInfinity(state.Width))
+        {
+            Width = state.Width;
+        }
+
+        if (state.Height > 0 && !double.IsNaN(state.Height) && !double.IsInfinity(state.Height))
+        {
+            Height = state.Height;
+        }
+
+        WindowState = state.WindowState;
+        _activeConversationSessionId = state.ActiveConversationSessionId;
+        _selectedConversationSessionId = state.SelectedConversationSessionId;
+        InputTranscriptTextBlock.Text = string.IsNullOrWhiteSpace(state.InputTranscriptText)
+            ? "Nothing heard yet."
+            : state.InputTranscriptText;
+        OutputTranscriptTextBlock.Text = string.IsNullOrWhiteSpace(state.OutputTranscriptText)
+            ? "No model response yet."
+            : state.OutputTranscriptText;
+        RestoreConversationView(state);
+        UpdateSessionVisualState(state.IsSessionRunning);
+
+        if (!string.IsNullOrWhiteSpace(state.StatusMessage))
+        {
+            StatusTextBlock.Text = state.StatusMessage;
+        }
+
+        SelectPanel(state.SelectedPanelKey);
+        UpdateConversationButtons();
     }
 
     private void LoadConversationSessions()
@@ -459,13 +502,12 @@ public partial class MainWindow : Window
         {
             var settings = ReadSettingsFromUi();
             _settingsService.Save(settings);
-            if (System.Windows.Application.Current is App app)
-            {
-                app.ApplyTheme(settings.AppTheme);
-            }
-
             _overlayService.ApplySettings(settings);
             SetStatus($"Saved settings. Model: {settings.LiveModel}. Voice: {settings.Voice}");
+            if (System.Windows.Application.Current is App app)
+            {
+                app.ApplyTheme(settings.AppTheme, refreshMainWindow: true);
+            }
             await _overlayService.ShowMessageAsync(
                 "Settings saved.",
                 TimeSpan.FromSeconds(2));
@@ -984,6 +1026,47 @@ public partial class MainWindow : Window
         _diagnosticsLogService.LogApp("UI", $"Status: {message}");
     }
 
+    private void HandleOrchestratorStatusChanged(string message)
+    {
+        Dispatcher.Invoke(() => SetStatus(message));
+    }
+
+    private void HandleOrchestratorSessionStateChanged(bool isRunning)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            var wasRunning = _isSessionRunning;
+            UpdateSessionVisualState(isRunning);
+
+            if (isRunning && !wasRunning)
+            {
+                EnsureConversationSessionStarted();
+            }
+            else if (!isRunning && wasRunning)
+            {
+                FinalizeActiveConversationSession();
+            }
+        });
+    }
+
+    private void HandleOrchestratorInputTranscriptionChanged(string text)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            InputTranscriptTextBlock.Text = string.IsNullOrWhiteSpace(text) ? "Nothing heard yet." : text;
+            LogConversationUpdate("You", text, isModel: false);
+        });
+    }
+
+    private void HandleOrchestratorOutputTranscriptionChanged(string text)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            OutputTranscriptTextBlock.Text = string.IsNullOrWhiteSpace(text) ? "No model response yet." : text;
+            LogConversationUpdate("Gemini", text, isModel: true);
+        });
+    }
+
     private ConversationSessionRecord? GetSelectedConversationSession()
     {
         return string.IsNullOrWhiteSpace(_selectedConversationSessionId)
@@ -1434,6 +1517,17 @@ public partial class MainWindow : Window
         MicrophoneGainValueTextBlock.Text = $"{Math.Round(gain * 100):0}%";
     }
 
+    private void UpdateSessionVisualState(bool isRunning)
+    {
+        _isSessionRunning = isRunning;
+        SessionStateTextBlock.Text = isRunning ? "Running" : "Stopped";
+        SessionStatusPill.Background = isRunning
+            ? new SolidColorBrush((WpfColor)System.Windows.Media.ColorConverter.ConvertFromString("#3300D4AA"))
+            : new SolidColorBrush((WpfColor)System.Windows.Media.ColorConverter.ConvertFromString("#22C62828"));
+        UpdateSessionButtons(isRunning);
+        UpdateConversationButtons();
+    }
+
     private void UpdateSessionButtons(bool isRunning)
     {
         StartSessionButton.IsEnabled = !isRunning;
@@ -1529,6 +1623,79 @@ public partial class MainWindow : Window
         ShowPanel(GeneralPanel);
     }
 
+    private string ReadSelectedPanelKey()
+    {
+        if (NavHistory.IsChecked == true)
+        {
+            return "History";
+        }
+
+        if (NavConnection.IsChecked == true)
+        {
+            return "Connection";
+        }
+
+        if (NavAudioCapture.IsChecked == true)
+        {
+            return "AudioCapture";
+        }
+
+        if (NavOverlay.IsChecked == true)
+        {
+            return "Overlay";
+        }
+
+        if (NavAiBehavior.IsChecked == true)
+        {
+            return "AiBehavior";
+        }
+
+        if (NavGeneral.IsChecked == true)
+        {
+            return "General";
+        }
+
+        return "Dashboard";
+    }
+
+    private void SelectPanel(string? panelKey)
+    {
+        var normalized = string.IsNullOrWhiteSpace(panelKey) ? "Dashboard" : panelKey.Trim();
+
+        switch (normalized)
+        {
+            case "History":
+                NavHistory.IsChecked = true;
+                ShowPanel(HistoryPanel);
+                break;
+            case "Connection":
+                NavConnection.IsChecked = true;
+                ShowPanel(ConnectionPanel);
+                break;
+            case "AudioCapture":
+                NavAudioCapture.IsChecked = true;
+                ShowPanel(AudioCapturePanel);
+                break;
+            case "Overlay":
+                NavOverlay.IsChecked = true;
+                ShowPanel(OverlayPanel);
+                break;
+            case "AiBehavior":
+                NavAiBehavior.IsChecked = true;
+                ShowPanel(AiBehaviorPanel);
+                break;
+            case "General":
+                NavGeneral.IsChecked = true;
+                ShowPanel(GeneralPanel);
+                break;
+            default:
+                NavDashboard.IsChecked = true;
+                ShowPanel(DashboardPanel);
+                LoadLastSessionPreview();
+                break;
+        }
+    }
+
     private void ShowPanel(UIElement target)
     {
         DashboardPanel.Visibility = Visibility.Collapsed;
@@ -1569,9 +1736,72 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        _orchestrator.StatusChanged -= HandleOrchestratorStatusChanged;
+        _orchestrator.SessionStateChanged -= HandleOrchestratorSessionStateChanged;
+        _orchestrator.InputTranscriptionChanged -= HandleOrchestratorInputTranscriptionChanged;
+        _orchestrator.OutputTranscriptionChanged -= HandleOrchestratorOutputTranscriptionChanged;
         _screenPreviewTimer.Stop();
         _microphoneLevelMonitor.Dispose();
         _voiceSamplePlayer.Dispose();
         base.OnClosed(e);
     }
+
+    private void RestoreConversationView(MainWindowUiState state)
+    {
+        if (state.ConversationEntries.Count > 0)
+        {
+            ClearConversationView();
+
+            foreach (var entry in state.ConversationEntries)
+            {
+                var restoredEntry = new ConversationLogEntry(entry.Timestamp, entry.Role, entry.Text);
+                _conversationLogEntries.Add(restoredEntry);
+
+                if (string.Equals(entry.Role, "Gemini", StringComparison.OrdinalIgnoreCase))
+                {
+                    _latestModelLogEntry = restoredEntry;
+                }
+                else if (string.Equals(entry.Role, "You", StringComparison.OrdinalIgnoreCase))
+                {
+                    _latestUserLogEntry = restoredEntry;
+                }
+            }
+
+            ConversationSessionHeaderTextBlock.Text = state.ConversationHeaderText;
+            ConversationSessionMetaTextBlock.Text = state.ConversationMetaText;
+            UpdateLogsPlaceholderVisibility();
+            ScrollLogsToEnd();
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(state.SelectedConversationSessionId))
+        {
+            SelectConversationSessionById(state.SelectedConversationSessionId, fallbackToFirst: true);
+            return;
+        }
+
+        ClearConversationView();
+    }
+
+    public sealed record MainWindowUiState(
+        double Left,
+        double Top,
+        double Width,
+        double Height,
+        WindowState WindowState,
+        string SelectedPanelKey,
+        string StatusMessage,
+        bool IsSessionRunning,
+        string? ActiveConversationSessionId,
+        string? SelectedConversationSessionId,
+        string InputTranscriptText,
+        string OutputTranscriptText,
+        string ConversationHeaderText,
+        string ConversationMetaText,
+        IReadOnlyList<ConversationLogEntrySnapshot> ConversationEntries);
+
+    public sealed record ConversationLogEntrySnapshot(
+        DateTime Timestamp,
+        string Role,
+        string Text);
 }
