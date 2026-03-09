@@ -30,6 +30,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
     private long _lastConsumedClientMessageIndex = -1;
     private bool _shouldBeRunning;
     private bool _transparentResumptionEnabled = true;
+    private int _recoveryInFlight;
 
     private readonly List<BufferedRealtimeInput> _pendingRealtimeInputs = new();
 
@@ -105,7 +106,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         var session = _session;
         if (session is null)
         {
-            _ = RecoverSessionAsync("Audio input arrived while the live session was reconnecting.");
+            QueueRecovery("Audio input arrived while the live session was reconnecting.");
             return;
         }
 
@@ -123,7 +124,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         var session = _session;
         if (session is null)
         {
-            _ = RecoverSessionAsync("Screen input arrived while the live session was reconnecting.");
+            QueueRecovery("Screen input arrived while the live session was reconnecting.");
             return;
         }
 
@@ -261,7 +262,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         catch (Exception ex)
         {
             StatusChanged?.Invoke($"Live session send interrupted: {ex.Message}. Attempting recovery...");
-            _ = RecoverSessionAsync($"Realtime send failed: {ex.Message}");
+            QueueRecovery($"Realtime send failed: {ex.Message}");
         }
         finally
         {
@@ -309,7 +310,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
                     if (_shouldBeRunning)
                     {
                         LogSession("Receive", "ReceiveAsync returned null while session should still be running.");
-                        _ = RecoverSessionAsync("Gemini Live closed the websocket. Reconnecting...");
+                        QueueRecovery("Gemini Live closed the websocket. Reconnecting...");
                     }
 
                     break;
@@ -328,7 +329,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
             {
                 LogSessionException("Receive", "Receive loop failed.", ex);
                 PublishStatus($"Live session error: {ex.Message}. Attempting recovery...");
-                _ = RecoverSessionAsync($"Receive loop failed: {ex.Message}");
+                QueueRecovery($"Receive loop failed: {ex.Message}");
             }
         }
         finally
@@ -368,7 +369,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         if (message.GoAway is not null)
         {
             PublishStatus("Gemini Live asked this session to reconnect soon. Resuming automatically...");
-            _ = RecoverSessionAsync("Gemini Live sent GoAway.");
+            QueueRecovery("Gemini Live sent GoAway.");
         }
 
         var parts = message.ServerContent?.ModelTurn?.Parts;
@@ -397,14 +398,25 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         }
     }
 
-    private async Task RecoverSessionAsync(string reason)
+    private void QueueRecovery(string reason)
     {
         if (!_shouldBeRunning || _activeSettings is null || _serviceLifetimeCts?.IsCancellationRequested == true)
         {
             return;
         }
 
-        await _reconnectLock.WaitAsync();
+        if (Interlocked.CompareExchange(ref _recoveryInFlight, 1, 0) != 0)
+        {
+            LogSession("Recover", $"Recovery already in flight. Ignored duplicate trigger | reason={reason}");
+            return;
+        }
+
+        _ = RecoverSessionAsync(reason);
+    }
+
+    private async Task RecoverSessionAsync(string reason)
+    {
+        var reconnectLockHeld = false;
         try
         {
             if (!_shouldBeRunning || _activeSettings is null || _serviceLifetimeCts?.IsCancellationRequested == true)
@@ -412,8 +424,12 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
                 return;
             }
 
+            var lifetimeToken = _serviceLifetimeCts?.Token ?? CancellationToken.None;
+            await _reconnectLock.WaitAsync(lifetimeToken);
+            reconnectLockHeld = true;
+
             var attempt = 0;
-            while (_shouldBeRunning && _activeSettings is not null && _serviceLifetimeCts?.IsCancellationRequested != true)
+            while (_shouldBeRunning && _activeSettings is not null && !lifetimeToken.IsCancellationRequested)
             {
                 attempt++;
                 try
@@ -424,14 +440,22 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
                     LogSession("Recover", $"Reconnect attempt {attempt} started | reason={reason}");
 
                     await DisposeCurrentSessionAsync(resetTranscripts: false, CancellationToken.None);
-                    await ConnectAsync(_activeSettings, allowResumption: true, CancellationToken.None);
+                    lifetimeToken.ThrowIfCancellationRequested();
+                    await ConnectAsync(_activeSettings, allowResumption: true, lifetimeToken);
+                    lifetimeToken.ThrowIfCancellationRequested();
                     if (_transparentResumptionEnabled)
                     {
-                        await ReplayBufferedRealtimeInputsAsync(CancellationToken.None);
+                        await ReplayBufferedRealtimeInputsAsync(lifetimeToken);
                     }
                     else
                     {
                         TrimBufferedInputsAfterOpaqueReconnect();
+                    }
+
+                    if (!_shouldBeRunning || lifetimeToken.IsCancellationRequested)
+                    {
+                        await DisposeCurrentSessionAsync(resetTranscripts: false, CancellationToken.None);
+                        return;
                     }
 
                     PublishStatus(string.IsNullOrWhiteSpace(_sessionResumptionHandle)
@@ -447,7 +471,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
                     LogSessionException("Recover", $"Reconnect attempt {attempt} failed.", ex);
                     PublishStatus($"Reconnect attempt {attempt} failed: {ex.Message}. Retrying...");
                     var delayMs = Math.Min(5000, 750 * attempt);
-                    await Task.Delay(delayMs, _serviceLifetimeCts?.Token ?? CancellationToken.None);
+                    await Task.Delay(delayMs, lifetimeToken);
                 }
             }
         }
@@ -456,7 +480,12 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         }
         finally
         {
-            _reconnectLock.Release();
+            if (reconnectLockHeld)
+            {
+                _reconnectLock.Release();
+            }
+
+            Interlocked.Exchange(ref _recoveryInFlight, 0);
         }
     }
 
@@ -620,6 +649,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         }
 
         _transparentResumptionEnabled = true;
+        Interlocked.Exchange(ref _recoveryInFlight, 0);
         LogSession("Recover", "Recovery state cleared.");
     }
 
