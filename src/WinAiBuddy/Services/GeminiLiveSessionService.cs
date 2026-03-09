@@ -16,6 +16,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
     private readonly SemaphoreSlim _reconnectLock = new(1, 1);
     private readonly object _transcriptLock = new();
     private readonly object _bufferLock = new();
+    private readonly DiagnosticsLogService _diagnosticsLogService;
 
     private Client? _client;
     private AsyncSession? _session;
@@ -36,8 +37,13 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
     private string _currentOutputTranscript = string.Empty;
     private DateTime _lastInputTranscriptAt = DateTime.MinValue;
     private DateTime _lastOutputTranscriptAt = DateTime.MinValue;
+    private DateTime _lastBufferedInputLogAt = DateTime.MinValue;
+    private DateTime _lastReceivedAudioLogAt = DateTime.MinValue;
     private bool _inputTurnOpen;
     private bool _outputTurnOpen;
+    private int _bufferedAudioChunksSinceLastLog;
+    private int _bufferedVideoFramesSinceLastLog;
+    private int _receivedAudioChunksSinceLastLog;
 
     public event Action<string>? StatusChanged;
 
@@ -50,6 +56,11 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
     public event Action<byte[]>? AudioReceived;
 
     public event Action? Interrupted;
+
+    public GeminiLiveSessionService(DiagnosticsLogService diagnosticsLogService)
+    {
+        _diagnosticsLogService = diagnosticsLogService;
+    }
 
     public async Task StartAsync(
         AppSettings settings,
@@ -68,6 +79,9 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         _activeSettings = settings;
         _shouldBeRunning = true;
         _serviceLifetimeCts = new CancellationTokenSource();
+        ResetDiagnosticsCounters();
+        var sessionLogPath = _diagnosticsLogService.StartSession(settings.LiveModel);
+        LogSession("Live", $"Start requested | model={settings.LiveModel} | voice={settings.Voice} | streamScreen={settings.StreamScreenFrames} | restoredTurns={restoredConversation?.Count ?? 0} | log={sessionLogPath}");
 
         await ConnectAsync(settings, allowResumption: false, cancellationToken);
 
@@ -77,7 +91,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         }
 
         SessionStateChanged?.Invoke(true);
-        StatusChanged?.Invoke("Connected to Gemini Live.");
+        PublishStatus("Connected to Gemini Live.");
     }
 
     public async Task SendAudioChunkAsync(AudioChunk chunk, CancellationToken cancellationToken = default)
@@ -129,6 +143,8 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         _activeSettings = null;
 
         ClearRecoveryState();
+        LogSession("Live", "Stop completed.");
+        _diagnosticsLogService.EndSession("Stopped");
         SessionStateChanged?.Invoke(false);
     }
 
@@ -141,6 +157,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
 
     private async Task ConnectAsync(AppSettings settings, bool allowResumption, CancellationToken cancellationToken)
     {
+        LogSession("Connect", $"Connecting | allowResumption={allowResumption} | apiVersion={(RequiresV1Alpha(settings) ? "v1alpha" : "v1beta")} | transparent={_transparentResumptionEnabled} | handlePresent={!string.IsNullOrWhiteSpace(_sessionResumptionHandle)}");
         _client?.Dispose();
         _client = new Client(
             apiKey: settings.ApiKey,
@@ -158,11 +175,14 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         catch (Exception ex) when (_transparentResumptionEnabled && SupportsTransparentFallback(ex))
         {
             _transparentResumptionEnabled = false;
-            StatusChanged?.Invoke("Gemini Live does not support transparent session resumption here. Falling back to handle-based recovery.");
+            LogSession("Connect", $"Transparent resumption rejected by Gemini. Falling back. | {ex.Message}");
+            PublishStatus("Gemini Live does not support transparent session resumption here. Falling back to handle-based recovery.");
 
             config = BuildConnectConfig(settings, allowResumption);
             _session = await _client.Live.ConnectAsync(settings.LiveModel, config, cancellationToken);
         }
+
+        LogSession("Connect", "Connected.");
 
         _receiveLoopCts?.Dispose();
         _receiveLoopCts = CancellationTokenSource.CreateLinkedTokenSource(
@@ -262,20 +282,23 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         var turns = BuildRestoredConversationTurns(restoredConversation);
         if (turns.Count == 0)
         {
+            LogSession("Restore", "Resume requested, but no valid turns were produced from saved conversation.");
             return;
         }
 
+        LogSession("Restore", $"Loading saved context | turns={turns.Count}");
         await session.SendClientContentAsync(new LiveSendClientContentParameters
         {
             Turns = turns,
             TurnComplete = false
         }, cancellationToken);
 
-        StatusChanged?.Invoke("Loaded saved conversation context into Gemini Live.");
+        PublishStatus("Loaded saved conversation context into Gemini Live.");
     }
 
     private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
     {
+        LogSession("Receive", "Receive loop started.");
         try
         {
             while (!cancellationToken.IsCancellationRequested && _session is not null)
@@ -285,6 +308,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
                 {
                     if (_shouldBeRunning)
                     {
+                        LogSession("Receive", "ReceiveAsync returned null while session should still be running.");
                         _ = RecoverSessionAsync("Gemini Live closed the websocket. Reconnecting...");
                     }
 
@@ -296,14 +320,20 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            LogSession("Receive", "Receive loop cancelled.");
         }
         catch (Exception ex)
         {
             if (_shouldBeRunning)
             {
-                StatusChanged?.Invoke($"Live session error: {ex.Message}. Attempting recovery...");
+                LogSessionException("Receive", "Receive loop failed.", ex);
+                PublishStatus($"Live session error: {ex.Message}. Attempting recovery...");
                 _ = RecoverSessionAsync($"Receive loop failed: {ex.Message}");
             }
+        }
+        finally
+        {
+            LogSession("Receive", "Receive loop ended.");
         }
     }
 
@@ -313,6 +343,8 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         {
             UpdateSessionResumptionState(resumptionUpdate);
         }
+
+        LogServerMessage(message);
 
         if (message.ServerContent?.InputTranscription?.Text is { Length: > 0 } inputText)
         {
@@ -328,13 +360,14 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
 
         if (message.ServerContent?.Interrupted == true)
         {
+            LogSession("Server", "Generation interrupted.");
             ResetOutputTranscript();
             Interrupted?.Invoke();
         }
 
         if (message.GoAway is not null)
         {
-            StatusChanged?.Invoke("Gemini Live asked this session to reconnect soon. Resuming automatically...");
+            PublishStatus("Gemini Live asked this session to reconnect soon. Resuming automatically...");
             _ = RecoverSessionAsync("Gemini Live sent GoAway.");
         }
 
@@ -352,6 +385,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
 
                 if (part.InlineData?.Data is { Length: > 0 } audioBytes)
                 {
+                    LogReceivedAudioSummary(audioBytes.Length);
                     AudioReceived?.Invoke(audioBytes);
                 }
             }
@@ -384,9 +418,10 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
                 attempt++;
                 try
                 {
-                    StatusChanged?.Invoke(attempt == 1
+                    PublishStatus(attempt == 1
                         ? $"Recovering live session: {reason}"
                         : $"Reconnect attempt {attempt} after: {reason}");
+                    LogSession("Recover", $"Reconnect attempt {attempt} started | reason={reason}");
 
                     await DisposeCurrentSessionAsync(resetTranscripts: false, CancellationToken.None);
                     await ConnectAsync(_activeSettings, allowResumption: true, CancellationToken.None);
@@ -399,16 +434,18 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
                         TrimBufferedInputsAfterOpaqueReconnect();
                     }
 
-                    StatusChanged?.Invoke(string.IsNullOrWhiteSpace(_sessionResumptionHandle)
+                    PublishStatus(string.IsNullOrWhiteSpace(_sessionResumptionHandle)
                         ? "Live session reconnected."
                         : _transparentResumptionEnabled
                             ? "Live session reconnected and resumed."
                             : "Live session reconnected and resumed context.");
+                    LogSession("Recover", $"Reconnect attempt {attempt} succeeded | handlePresent={!string.IsNullOrWhiteSpace(_sessionResumptionHandle)} | transparent={_transparentResumptionEnabled}");
                     return;
                 }
                 catch (Exception ex)
                 {
-                    StatusChanged?.Invoke($"Reconnect attempt {attempt} failed: {ex.Message}. Retrying...");
+                    LogSessionException("Recover", $"Reconnect attempt {attempt} failed.", ex);
+                    PublishStatus($"Reconnect attempt {attempt} failed: {ex.Message}. Retrying...");
                     var delayMs = Math.Min(5000, 750 * attempt);
                     await Task.Delay(delayMs, _serviceLifetimeCts?.Token ?? CancellationToken.None);
                 }
@@ -442,8 +479,11 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
 
         if (replayItems.Count == 0)
         {
+            LogSession("Recover", "No buffered realtime inputs needed replay.");
             return;
         }
+
+        LogSession("Recover", $"Replaying buffered realtime inputs | count={replayItems.Count} | lastConsumed={_lastConsumedClientMessageIndex}");
 
         await _sendLock.WaitAsync(cancellationToken);
         try
@@ -476,6 +516,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
             }
             catch
             {
+                LogSession("Dispose", "Session close raised and was ignored.");
             }
 
             await _session.DisposeAsync();
@@ -505,6 +546,8 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         {
             ResetTranscriptState();
         }
+
+        LogSession("Dispose", $"Disposed current session | resetTranscripts={resetTranscripts}");
     }
 
     private void UpdateSessionResumptionState(LiveServerSessionResumptionUpdate update)
@@ -522,6 +565,8 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
                 _pendingRealtimeInputs.RemoveAll(item => item.Index <= _lastConsumedClientMessageIndex);
             }
         }
+
+        LogSession("Resumption", $"Update | resumable={update.Resumable} | handlePresent={!string.IsNullOrWhiteSpace(update.NewHandle)} | lastConsumed={update.LastConsumedClientMessageIndex?.ToString() ?? "n/a"}");
     }
 
     private BufferedRealtimeInput BufferAudio(AudioChunk chunk)
@@ -558,6 +603,8 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
                 _pendingRealtimeInputs.RemoveAt(0);
             }
 
+            UpdateBufferedInputLogState(audio is not null, video is not null, buffered.Index, _pendingRealtimeInputs.Count);
+
             return buffered;
         }
     }
@@ -573,6 +620,7 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         }
 
         _transparentResumptionEnabled = true;
+        LogSession("Recover", "Recovery state cleared.");
     }
 
     private void TrimBufferedInputsAfterOpaqueReconnect()
@@ -582,6 +630,8 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
             _pendingRealtimeInputs.Clear();
             _lastConsumedClientMessageIndex = _nextClientMessageIndex;
         }
+
+        LogSession("Recover", "Transparent replay unavailable. Cleared buffered realtime inputs after reconnect.");
     }
 
     private void PublishInputTranscript(string chunk)
@@ -863,6 +913,87 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
     private static bool SupportsTransparentFallback(Exception ex)
     {
         return ex.Message.Contains(TransparentUnsupportedMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void PublishStatus(string message)
+    {
+        LogSession("Status", message);
+        StatusChanged?.Invoke(message);
+    }
+
+    private void LogServerMessage(LiveServerMessage message)
+    {
+        var modelParts = message.ServerContent?.ModelTurn?.Parts;
+        var textParts = modelParts?.Count(part => !string.IsNullOrWhiteSpace(part.Text) && part.Thought != true) ?? 0;
+        var thoughtParts = modelParts?.Count(part => part.Thought == true) ?? 0;
+        var audioParts = modelParts?.Count(part => part.InlineData?.Data is { Length: > 0 }) ?? 0;
+
+        LogSession(
+            "Server",
+            $"Message | goAway={message.GoAway is not null} | interrupted={message.ServerContent?.Interrupted == true} | turnComplete={message.ServerContent?.TurnComplete == true} | generationComplete={message.ServerContent?.GenerationComplete == true} | inputText={(message.ServerContent?.InputTranscription?.Text?.Length ?? 0)} chars | outputText={(message.ServerContent?.OutputTranscription?.Text?.Length ?? 0)} chars | textParts={textParts} | thoughtParts={thoughtParts} | audioParts={audioParts}");
+    }
+
+    private void ResetDiagnosticsCounters()
+    {
+        _lastBufferedInputLogAt = DateTime.MinValue;
+        _lastReceivedAudioLogAt = DateTime.MinValue;
+        _bufferedAudioChunksSinceLastLog = 0;
+        _bufferedVideoFramesSinceLastLog = 0;
+        _receivedAudioChunksSinceLastLog = 0;
+    }
+
+    private void UpdateBufferedInputLogState(bool hasAudio, bool hasVideo, long index, int pendingCount)
+    {
+        var now = DateTime.UtcNow;
+
+        if (hasAudio)
+        {
+            _bufferedAudioChunksSinceLastLog++;
+        }
+
+        if (hasVideo)
+        {
+            _bufferedVideoFramesSinceLastLog++;
+        }
+
+        if ((now - _lastBufferedInputLogAt) < TimeSpan.FromSeconds(5))
+        {
+            return;
+        }
+
+        LogSession(
+            "Buffer",
+            $"Buffered realtime input summary | latestIndex={index} | pending={pendingCount} | audioChunks={_bufferedAudioChunksSinceLastLog} | videoFrames={_bufferedVideoFramesSinceLastLog}");
+        _bufferedAudioChunksSinceLastLog = 0;
+        _bufferedVideoFramesSinceLastLog = 0;
+        _lastBufferedInputLogAt = now;
+    }
+
+    private void LogReceivedAudioSummary(int bytes)
+    {
+        var now = DateTime.UtcNow;
+        _receivedAudioChunksSinceLastLog++;
+
+        if ((now - _lastReceivedAudioLogAt) < TimeSpan.FromSeconds(5))
+        {
+            return;
+        }
+
+        LogSession(
+            "Audio",
+            $"Received output audio summary | chunks={_receivedAudioChunksSinceLastLog} | lastChunkBytes={bytes}");
+        _receivedAudioChunksSinceLastLog = 0;
+        _lastReceivedAudioLogAt = now;
+    }
+
+    private void LogSession(string category, string message)
+    {
+        _diagnosticsLogService.LogSession(category, message);
+    }
+
+    private void LogSessionException(string category, string message, Exception exception)
+    {
+        _diagnosticsLogService.LogSessionException(category, message, exception);
     }
 
     private sealed record BufferedRealtimeInput(long Index, Blob? Audio, Blob? Video)

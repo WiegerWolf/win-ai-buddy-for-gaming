@@ -16,6 +16,7 @@ public partial class App : Application
     private GeminiLiveSessionService? _liveSessionService;
     private AudioRecordingService? _audioRecordingService;
     private SpeechPlaybackService? _speechPlaybackService;
+    private DiagnosticsLogService? _diagnosticsLogService;
     private bool _isShuttingDown;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -30,10 +31,17 @@ public partial class App : Application
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "WinAiBuddy",
             "Conversations");
+        var diagnosticsLogsPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "WinAiBuddy",
+            "Logs");
 
         var settingsService = new SettingsService(settingsPath);
         settingsService.EnsureLoaded();
         ApplyTheme(settingsService.Current.AppTheme);
+        _diagnosticsLogService = new DiagnosticsLogService(diagnosticsLogsPath);
+        RegisterGlobalExceptionLogging();
+        _diagnosticsLogService.LogApp("App", "Application startup.");
         var conversationSessionStore = new ConversationSessionStore(conversationSessionsPath);
         conversationSessionStore.RecoverInterruptedSessions();
 
@@ -41,7 +49,7 @@ public partial class App : Application
         var overlayService = new OverlayService(overlayWindow, settingsService);
         var screenCaptureService = new ScreenCaptureService();
         _audioRecordingService = new AudioRecordingService();
-        _liveSessionService = new GeminiLiveSessionService();
+        _liveSessionService = new GeminiLiveSessionService(_diagnosticsLogService);
         _speechPlaybackService = new SpeechPlaybackService();
 
         _orchestrator = new GameAssistantOrchestrator(
@@ -52,7 +60,7 @@ public partial class App : Application
             overlayService,
             _speechPlaybackService);
 
-        _mainWindow = new MainWindow(settingsService, conversationSessionStore, _orchestrator, overlayService);
+        _mainWindow = new MainWindow(settingsService, conversationSessionStore, _orchestrator, overlayService, _diagnosticsLogService);
         _mainWindow.Icon = AppIconProvider.LoadWindowIcon();
         _mainWindow.Show();
 
@@ -67,6 +75,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _diagnosticsLogService?.LogApp("App", $"Application exit | code={e.ApplicationExitCode}");
         _audioRecordingService?.Dispose();
         _audioRecordingService = null;
         _speechPlaybackService?.Dispose();
@@ -80,6 +89,24 @@ public partial class App : Application
         }
 
         base.OnExit(e);
+    }
+
+    private void RegisterGlobalExceptionLogging()
+    {
+        DispatcherUnhandledException += (_, args) =>
+        {
+            _diagnosticsLogService?.LogApp("Crash", $"DispatcherUnhandledException | handled={args.Handled}{Environment.NewLine}{args.Exception}");
+        };
+
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            _diagnosticsLogService?.LogApp("Crash", $"AppDomainUnhandledException | terminating={args.IsTerminating}{Environment.NewLine}{args.ExceptionObject}");
+        };
+
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            _diagnosticsLogService?.LogApp("Crash", $"UnobservedTaskException{Environment.NewLine}{args.Exception}");
+        };
     }
 
     private void ConfigureTrayIcon()

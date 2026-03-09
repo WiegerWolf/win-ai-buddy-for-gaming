@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private readonly ConversationSessionStore _conversationSessionStore;
     private readonly GameAssistantOrchestrator _orchestrator;
     private readonly OverlayService _overlayService;
+    private readonly DiagnosticsLogService _diagnosticsLogService;
     private readonly VoiceSamplePlayer _voiceSamplePlayer;
     private readonly MicrophoneLevelMonitor _microphoneLevelMonitor;
     private readonly DispatcherTimer _screenPreviewTimer;
@@ -40,12 +41,14 @@ public partial class MainWindow : Window
         SettingsService settingsService,
         ConversationSessionStore conversationSessionStore,
         GameAssistantOrchestrator orchestrator,
-        OverlayService overlayService)
+        OverlayService overlayService,
+        DiagnosticsLogService diagnosticsLogService)
     {
         _settingsService = settingsService;
         _conversationSessionStore = conversationSessionStore;
         _orchestrator = orchestrator;
         _overlayService = overlayService;
+        _diagnosticsLogService = diagnosticsLogService;
         _voiceSamplePlayer = new VoiceSamplePlayer(Path.Combine(AppContext.BaseDirectory, "Assets", "VoiceSamples"));
         _microphoneLevelMonitor = new MicrophoneLevelMonitor();
         _screenPreviewTimer = new DispatcherTimer
@@ -904,6 +907,7 @@ public partial class MainWindow : Window
     private void SetStatus(string message)
     {
         StatusTextBlock.Text = message;
+        _diagnosticsLogService.LogApp("UI", $"Status: {message}");
     }
 
     private ConversationSessionRecord? GetSelectedConversationSession()
