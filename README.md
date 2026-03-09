@@ -70,8 +70,8 @@ An example config is included at [appsettings.example.json](C:\Users\n\Documents
 
 GitHub Actions publishes Windows release zips automatically:
 
-- Push to `main`: creates a prerelease build in GitHub Releases
 - Push a git tag: creates a tagged release in GitHub Releases
+- Run the workflow manually: creates a prerelease build in GitHub Releases
 
 ## Gemini Live flow
 

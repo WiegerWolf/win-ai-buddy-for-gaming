@@ -2,8 +2,6 @@ name: Build and Release
 
 on:
   push:
-    branches:
-      - main
     tags:
       - "*"
   workflow_dispatch:
@@ -40,11 +38,11 @@ jobs:
             $releaseNotes = "Automated release for tag ${env:GITHUB_REF_NAME}."
           }
           else {
-            $tagName = "main-${env:GITHUB_RUN_NUMBER}-$shortSha"
-            $releaseName = "main build ${env:GITHUB_RUN_NUMBER}"
+            $tagName = "manual-${env:GITHUB_RUN_NUMBER}-$shortSha"
+            $releaseName = "manual build ${env:GITHUB_RUN_NUMBER}"
             $prerelease = "true"
-            $artifactName = "WinAiBuddy-main-$shortSha-win-x64.zip"
-            $releaseNotes = "Automated prerelease from main (${env:GITHUB_SHA})."
+            $artifactName = "WinAiBuddy-manual-$shortSha-win-x64.zip"
+            $releaseNotes = "Manual workflow release from ${env:GITHUB_SHA}."
           }
 
           "tag_name=$tagName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
