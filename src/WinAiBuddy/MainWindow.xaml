@@ -1045,11 +1045,11 @@
 
                                         <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,8,16,8" Text="App theme" Style="{StaticResource FieldLabel}" />
                                         <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,6">
-                                            <ComboBox x:Name="AppThemeComboBox" />
-                                            <TextBlock Margin="0,8,0,0"
-                                                       Style="{StaticResource FieldDescription}"
-                                                       Text="System uses standard Windows styling. Theme changes are applied the next time you open the app." />
-                                        </StackPanel>
+                                                    <ComboBox x:Name="AppThemeComboBox" />
+                                                    <TextBlock Margin="0,8,0,0"
+                                                               Style="{StaticResource FieldDescription}"
+                                                               Text="System uses standard Windows styling. Theme changes are applied as soon as you save settings." />
+                                                </StackPanel>
 
                                         <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,16,8" Text="Startup" Style="{StaticResource FieldLabel}" />
                                         <CheckBox x:Name="AutoStartSessionCheckBox"

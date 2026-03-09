@@ -457,16 +457,17 @@ public partial class MainWindow : Window
     {
         try
         {
-            var previousTheme = _settingsService.Current.AppTheme;
             var settings = ReadSettingsFromUi();
             _settingsService.Save(settings);
+            if (System.Windows.Application.Current is App app)
+            {
+                app.ApplyTheme(settings.AppTheme);
+            }
+
             _overlayService.ApplySettings(settings);
-            var themeChanged = !string.Equals(previousTheme, settings.AppTheme, StringComparison.OrdinalIgnoreCase);
-            SetStatus(themeChanged
-                ? $"Saved settings. Model: {settings.LiveModel}. Theme change will apply next time you open the app."
-                : $"Saved settings. Model: {settings.LiveModel}. Voice: {settings.Voice}");
+            SetStatus($"Saved settings. Model: {settings.LiveModel}. Voice: {settings.Voice}");
             await _overlayService.ShowMessageAsync(
-                themeChanged ? "Settings saved. Restart the app to switch theme." : "Settings saved.",
+                "Settings saved.",
                 TimeSpan.FromSeconds(2));
         }
         catch (Exception ex)
