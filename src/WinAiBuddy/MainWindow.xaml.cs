@@ -32,6 +32,7 @@ public partial class MainWindow : Window
     private int _screenPreviewVersion;
     private string? _activeConversationSessionId;
     private string? _selectedConversationSessionId;
+    private ConversationSessionRecord? _pendingResumeSession;
     private ConversationLogEntry? _latestUserLogEntry;
     private ConversationLogEntry? _latestModelLogEntry;
 
@@ -66,6 +67,7 @@ public partial class MainWindow : Window
         LoadConversationSessions();
         UpdateLogsPlaceholderVisibility();
         UpdateSessionButtons(isRunning: false);
+        UpdateConversationButtons();
 
         _orchestrator.StatusChanged += message => Dispatcher.Invoke(() => SetStatus(message));
         _orchestrator.SessionStateChanged += isRunning => Dispatcher.Invoke(() =>
@@ -77,6 +79,7 @@ public partial class MainWindow : Window
                 ? new SolidColorBrush((WpfColor)System.Windows.Media.ColorConverter.ConvertFromString("#3300D4AA"))
                 : new SolidColorBrush((WpfColor)System.Windows.Media.ColorConverter.ConvertFromString("#22C62828"));
             UpdateSessionButtons(isRunning);
+            UpdateConversationButtons();
 
             if (isRunning && !wasRunning)
             {
@@ -131,6 +134,7 @@ public partial class MainWindow : Window
             ConversationSessionHeaderTextBlock.Text = "No saved sessions yet";
             ConversationSessionMetaTextBlock.Text = "Start a live session and the transcript will be saved here automatically.";
             ClearConversationView();
+            UpdateConversationButtons();
             return;
         }
 
@@ -167,13 +171,15 @@ public partial class MainWindow : Window
             return;
         }
 
-        var record = _conversationSessionStore.StartSession(ReadSelectedLiveModel(_settingsService.Current.LiveModel));
+        var record = _conversationSessionStore.StartSession(
+            ReadSelectedLiveModel(_settingsService.Current.LiveModel),
+            _pendingResumeSession?.Entries,
+            _pendingResumeSession?.Id);
         _activeConversationSessionId = record.Id;
         _selectedConversationSessionId = record.Id;
-        _conversationLogEntries.Clear();
-        _latestUserLogEntry = null;
-        _latestModelLogEntry = null;
+        _pendingResumeSession = null;
         LoadConversationSessions();
+        PopulateConversationView(record);
         SetStatus("Live session started. Conversation history is being saved.");
     }
 
@@ -187,6 +193,7 @@ public partial class MainWindow : Window
         _conversationSessionStore.SaveSnapshot(_activeConversationSessionId, _conversationLogEntries);
         _conversationSessionStore.EndSession(_activeConversationSessionId);
         _activeConversationSessionId = null;
+        _pendingResumeSession = null;
         LoadConversationSessions();
     }
 
@@ -235,6 +242,7 @@ public partial class MainWindow : Window
 
         _selectedConversationSessionId = summary.Id;
         PopulateConversationView(record);
+        UpdateConversationButtons();
     }
 
     private void PopulateConversationView(ConversationSessionRecord record)
@@ -256,13 +264,14 @@ public partial class MainWindow : Window
             }
         }
 
-        ConversationSessionHeaderTextBlock.Text = record.StartedAt.ToLocalTime().ToString("dddd, MMM d • HH:mm");
+        ConversationSessionHeaderTextBlock.Text = record.StartedAt.ToLocalTime().ToString("dddd, MMM d - HH:mm");
         var status = string.IsNullOrWhiteSpace(record.Status) ? "Saved" : record.Status;
+        var resumedText = string.IsNullOrWhiteSpace(record.ResumedFromSessionId) ? string.Empty : " - continued";
         var endedText = record.EndedAt is null
             ? "still open"
             : $"ended {record.EndedAt.Value.ToLocalTime():HH:mm}";
         ConversationSessionMetaTextBlock.Text =
-            $"{status} • {record.Entries.Count} {(record.Entries.Count == 1 ? "message" : "messages")} • {endedText}";
+            $"{status}{resumedText} - {record.Entries.Count} {(record.Entries.Count == 1 ? "message" : "messages")} - {endedText}";
 
         UpdateLogsPlaceholderVisibility();
         ScrollLogsToEnd();
@@ -394,6 +403,7 @@ public partial class MainWindow : Window
     {
         try
         {
+            _pendingResumeSession = null;
             var settings = ReadSettingsFromUi();
             _settingsService.Save(settings);
             _overlayService.ApplySettings(settings);
@@ -403,6 +413,43 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             SetStatus($"Start failed: {ex.Message}");
+        }
+    }
+
+    private async void ResumeSessionButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_isSessionRunning)
+        {
+            SetStatus("Stop the current live session before resuming an older one.");
+            return;
+        }
+
+        var sessionToResume = GetSelectedConversationSession();
+        if (sessionToResume is null)
+        {
+            SetStatus("Select a saved conversation session first.");
+            return;
+        }
+
+        if (sessionToResume.Entries.Count == 0)
+        {
+            SetStatus("That saved session has no conversation turns to resume.");
+            return;
+        }
+
+        try
+        {
+            _pendingResumeSession = sessionToResume;
+            var settings = ReadSettingsFromUi();
+            _settingsService.Save(settings);
+            _overlayService.ApplySettings(settings);
+            SetStatus("Starting live session from the selected saved conversation...");
+            await _orchestrator.StartLiveSessionAsync(sessionToResume.Entries);
+        }
+        catch (Exception ex)
+        {
+            _pendingResumeSession = null;
+            SetStatus($"Resume failed: {ex.Message}");
         }
     }
 
@@ -513,6 +560,7 @@ public partial class MainWindow : Window
     {
         if (_isChangingSessionSelection || ConversationSessionsListBox.SelectedItem is not ConversationSessionSummary summary)
         {
+            UpdateConversationButtons();
             return;
         }
 
@@ -525,10 +573,12 @@ public partial class MainWindow : Window
                 string.Equals(item.Id, _activeConversationSessionId, StringComparison.OrdinalIgnoreCase));
             _isChangingSessionSelection = false;
             SetStatus("Stop the current live session to browse older saved conversations.");
+            UpdateConversationButtons();
             return;
         }
 
         SelectConversationSessionById(summary.Id);
+        UpdateConversationButtons();
     }
 
     private void CopyLogsButton_OnClick(object sender, RoutedEventArgs e)
@@ -559,6 +609,7 @@ public partial class MainWindow : Window
         _conversationSessionStore.ClearSessionEntries(_selectedConversationSessionId);
         ClearConversationView();
         LoadConversationSessions();
+        UpdateConversationButtons();
         SetStatus("Cleared the selected conversation session.");
     }
 
@@ -853,6 +904,13 @@ public partial class MainWindow : Window
     private void SetStatus(string message)
     {
         StatusTextBlock.Text = message;
+    }
+
+    private ConversationSessionRecord? GetSelectedConversationSession()
+    {
+        return string.IsNullOrWhiteSpace(_selectedConversationSessionId)
+            ? null
+            : _conversationSessionStore.GetSession(_selectedConversationSessionId);
     }
 
     private void InitializeModelOptionLists()
@@ -1304,11 +1362,25 @@ public partial class MainWindow : Window
         StopSessionButton.IsEnabled = isRunning;
     }
 
+    private void UpdateConversationButtons()
+    {
+        if (!IsInitialized)
+        {
+            return;
+        }
+
+        var hasSelectedSession = !string.IsNullOrWhiteSpace(_selectedConversationSessionId);
+        ResumeSessionButton.IsEnabled = !_isSessionRunning && hasSelectedSession;
+        ClearLogsButton.IsEnabled = hasSelectedSession;
+        CopyLogsButton.IsEnabled = _conversationLogEntries.Count > 0;
+    }
+
     private void UpdateLogsPlaceholderVisibility()
     {
         LogsPlaceholderTextBlock.Visibility = _conversationLogEntries.Count == 0
             ? Visibility.Visible
             : Visibility.Collapsed;
+        UpdateConversationButtons();
     }
 
     private void UpdateConversationSessionsPlaceholderVisibility()

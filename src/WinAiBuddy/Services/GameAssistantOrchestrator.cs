@@ -78,7 +78,9 @@ public sealed class GameAssistantOrchestrator : IAsyncDisposable
 
     public event Action<string>? OutputTranscriptionChanged;
 
-    public async Task StartLiveSessionAsync(CancellationToken cancellationToken = default)
+    public async Task StartLiveSessionAsync(
+        IReadOnlyList<ConversationLogEntryRecord>? restoredConversation = null,
+        CancellationToken cancellationToken = default)
     {
         if (_isRunning)
         {
@@ -87,7 +89,7 @@ public sealed class GameAssistantOrchestrator : IAsyncDisposable
         }
 
         var settings = _settingsProvider();
-        await _liveSessionService.StartAsync(settings, cancellationToken);
+        await _liveSessionService.StartAsync(settings, restoredConversation, cancellationToken);
 
         _audioRecordingService.StartStreaming(settings.MicrophoneDeviceName, settings.MicrophoneGain);
         StartScreenLoop(settings);

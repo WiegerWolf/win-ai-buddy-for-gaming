@@ -51,7 +51,10 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
 
     public event Action? Interrupted;
 
-    public async Task StartAsync(AppSettings settings, CancellationToken cancellationToken = default)
+    public async Task StartAsync(
+        AppSettings settings,
+        IReadOnlyList<ConversationLogEntryRecord>? restoredConversation = null,
+        CancellationToken cancellationToken = default)
     {
         await StopAsync(cancellationToken);
         ResetTranscriptState();
@@ -67,6 +70,11 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         _serviceLifetimeCts = new CancellationTokenSource();
 
         await ConnectAsync(settings, allowResumption: false, cancellationToken);
+
+        if (restoredConversation is { Count: > 0 } restoredTurns)
+        {
+            await RestoreConversationContextAsync(restoredTurns, cancellationToken);
+        }
 
         SessionStateChanged?.Invoke(true);
         StatusChanged?.Invoke("Connected to Gemini Live.");
@@ -239,6 +247,31 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         {
             _sendLock.Release();
         }
+    }
+
+    private async Task RestoreConversationContextAsync(
+        IReadOnlyList<ConversationLogEntryRecord> restoredConversation,
+        CancellationToken cancellationToken)
+    {
+        var session = _session;
+        if (session is null)
+        {
+            return;
+        }
+
+        var turns = BuildRestoredConversationTurns(restoredConversation);
+        if (turns.Count == 0)
+        {
+            return;
+        }
+
+        await session.SendClientContentAsync(new LiveSendClientContentParameters
+        {
+            Turns = turns,
+            TurnComplete = false
+        }, cancellationToken);
+
+        StatusChanged?.Invoke("Loaded saved conversation context into Gemini Live.");
     }
 
     private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
@@ -653,6 +686,59 @@ public sealed class GeminiLiveSessionService : IAsyncDisposable
         }
 
         return existing + " " + incoming;
+    }
+
+    private static List<Content> BuildRestoredConversationTurns(IReadOnlyList<ConversationLogEntryRecord> restoredConversation)
+    {
+        var turns = new List<Content>();
+        Content? current = null;
+        string? currentRole = null;
+
+        foreach (var entry in restoredConversation)
+        {
+            var text = entry.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                continue;
+            }
+
+            var role = MapSavedConversationRole(entry.Role);
+            if (role is null)
+            {
+                continue;
+            }
+
+            if (!string.Equals(currentRole, role, StringComparison.Ordinal))
+            {
+                current = new Content
+                {
+                    Role = role,
+                    Parts = new List<Part>()
+                };
+                turns.Add(current);
+                currentRole = role;
+            }
+
+            current!.Parts ??= new List<Part>();
+            current.Parts.Add(new Part { Text = text });
+        }
+
+        return turns;
+    }
+
+    private static string? MapSavedConversationRole(string? role)
+    {
+        if (string.Equals(role, "You", StringComparison.OrdinalIgnoreCase))
+        {
+            return "user";
+        }
+
+        if (string.Equals(role, "Gemini", StringComparison.OrdinalIgnoreCase))
+        {
+            return "model";
+        }
+
+        return null;
     }
 
     private static string NormalizeTranscriptForDisplay(string transcript)

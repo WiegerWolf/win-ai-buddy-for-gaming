@@ -4,6 +4,8 @@ public sealed class ConversationSessionRecord
 {
     public string Id { get; set; } = string.Empty;
 
+    public string? ResumedFromSessionId { get; set; }
+
     public DateTime StartedAt { get; set; }
 
     public DateTime? EndedAt { get; set; }

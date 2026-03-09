@@ -51,7 +51,10 @@ public sealed class ConversationSessionStore
         }
     }
 
-    public ConversationSessionRecord StartSession(string model)
+    public ConversationSessionRecord StartSession(
+        string model,
+        IEnumerable<ConversationLogEntryRecord>? seedEntries = null,
+        string? resumedFromSessionId = null)
     {
         lock (_sync)
         {
@@ -59,10 +62,19 @@ public sealed class ConversationSessionStore
             var record = new ConversationSessionRecord
             {
                 Id = Guid.NewGuid().ToString("N"),
+                ResumedFromSessionId = resumedFromSessionId,
                 StartedAt = now,
                 LastUpdatedAt = now,
                 Status = "Active",
-                Model = model
+                Model = model,
+                Entries = seedEntries?
+                    .Select(entry => new ConversationLogEntryRecord
+                    {
+                        Timestamp = entry.Timestamp,
+                        Role = entry.Role,
+                        Text = entry.Text
+                    })
+                    .ToList() ?? []
             };
 
             WriteRecord(GetPath(record.Id), record);
@@ -153,6 +165,7 @@ public sealed class ConversationSessionStore
                 .Where(record => record is not null)
                 .Select(record => new ConversationSessionSummary(
                     record!.Id,
+                    record.ResumedFromSessionId,
                     record.StartedAt,
                     record.EndedAt,
                     record.LastUpdatedAt,
@@ -204,6 +217,7 @@ public sealed class ConversationSessionStore
         return new ConversationSessionRecord
         {
             Id = record.Id,
+            ResumedFromSessionId = record.ResumedFromSessionId,
             StartedAt = record.StartedAt,
             EndedAt = record.EndedAt,
             LastUpdatedAt = record.LastUpdatedAt,
