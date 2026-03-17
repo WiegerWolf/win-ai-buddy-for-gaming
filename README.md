@@ -25,6 +25,12 @@ Watch the app in action: [YouTube showcase](https://youtu.be/KWATSGGqDfc?si=hlTv
 - Streamed PCM audio playback for model responses
 - Conversation history with restorable saved sessions after stop or crash
 
+## Costs
+
+Bear in mind that for the runtime of a session you're sending your screen and mic input to Gemini for processing. That might get expensive fast. For example this is what it costs to [play for 3h](https://www.youtube.com/watch?v=1uSyBeRY5B8) with the default settings (send screen each 1 second):
+
+![Cost to play 3h](docs/cost-3h-playtime.jpg)
+
 ## Screenshots
 
 ### Main app
